@@ -1,0 +1,43 @@
+{
+  "protocol": {
+    "training_players": 5521,
+    "inner_validation_players": 50,
+    "external_validation_players": 400,
+    "holdout_read": false,
+    "minimum_games_per_training_player": 20
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.9832226065702216,
+      "validation_nll": 1.8701869249343872,
+      "validation_score": 0.3932138862480767
+    }
+  ],
+  "external_validation": {
+    "by_games": {
+      "5": {
+        "score": 0.35891326189527634,
+        "top1": 0.2285,
+        "nll": 1.9677932262420654
+      },
+      "10": {
+        "score": 0.3893123792627198,
+        "top1": 0.244,
+        "nll": 1.8468077182769775
+      },
+      "15": {
+        "score": 0.4103396666890773,
+        "top1": 0.25675,
+        "nll": 1.7956396341323853
+      },
+      "20": {
+        "score": 0.4327866527183633,
+        "top1": 0.27,
+        "nll": 1.7701910734176636
+      }
+    },
+    "score": 0.3978379901413592,
+    "nll": 1.845107913017273
+  }
+}

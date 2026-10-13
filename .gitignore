@@ -1,0 +1,49 @@
+# Python environments and caches
+.venv
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pylint.d/
+
+# Licensed data, third-party engines, and generated features
+data/
+features/
+models/
+third_party/
+**/data/
+**/features/
+**/models/
+**/third_party/
+**/shards/
+**/embeddings/
+**/embeddings_*/
+**/move_holdout*/
+
+# Model weights and generated binary artifacts
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+*.pkl
+*.joblib
+*.bin
+*.bin.gz
+*.csv
+
+# Runtime output
+logs/
+**/logs/
+*.log
+submission*.csv
+
+# One-off Competition 2 scratch analyses superseded by documented modules
+competition2_rank_prediction/analysis_*.py
+competition2_rank_prediction/eval_dense_*.py
+competition2_rank_prediction/eval_final.py
+
+# Local archives are intentionally kept outside version control
+archive/**
+**/archive/**
+!**/archive/README.md

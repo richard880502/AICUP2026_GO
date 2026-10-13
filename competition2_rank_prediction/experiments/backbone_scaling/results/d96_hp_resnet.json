@@ -1,0 +1,54 @@
+{
+  "models": [
+    "d96_h",
+    "hp_big",
+    "hp_reg",
+    "resnet8c_h"
+  ],
+  "single": {
+    "d96_h": {
+      "mean/argmax": 0.497098778596167,
+      "mean/expected": 0.5648905367810948,
+      "logmean/argmax": 0.5431615306940153,
+      "logmean/expected": 0.5867733767687497
+    },
+    "hp_big": {
+      "mean/argmax": 0.4940635435655895,
+      "mean/expected": 0.5550185382112697,
+      "logmean/argmax": 0.5406183175531305,
+      "logmean/expected": 0.5771375963630938
+    },
+    "hp_reg": {
+      "mean/argmax": 0.48450160241482887,
+      "mean/expected": 0.5565038378117864,
+      "logmean/argmax": 0.5343681184183044,
+      "logmean/expected": 0.5795166849856606
+    },
+    "resnet8c_h": {
+      "mean/argmax": 0.5097645877113551,
+      "mean/expected": 0.5388241392442022,
+      "logmean/argmax": 0.5598238485911151,
+      "logmean/expected": 0.5516075515552576
+    }
+  },
+  "fused": {
+    "mean/argmax": 0.5237765163215768,
+    "mean/expected": 0.587198588444115,
+    "logmean/argmax": 0.572917564060452,
+    "logmean/expected": 0.6108985759035759
+  },
+  "weights": [
+    {
+      "d96_h": 0.8149357458919875,
+      "hp_big": 0.04792204751831031,
+      "hp_reg": 9.478037364702247e-06,
+      "resnet8c_h": 0.4389225181902504
+    },
+    {
+      "d96_h": 0.8386638199262425,
+      "hp_big": 0.0580460149933499,
+      "hp_reg": 7.363106276989106e-05,
+      "resnet8c_h": 0.39014112799863315
+    }
+  ]
+}

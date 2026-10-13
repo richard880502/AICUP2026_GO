@@ -1,0 +1,108 @@
+{
+  "method": "candidate_only_cross_dimension_arcface_ensemble",
+  "uses_query_labels_for_training": false,
+  "split_seed": 20260927,
+  "selected_second_dimension_weight": null,
+  "selected_second_dimension_weights": {
+    "5": 0.7,
+    "10": 0.65,
+    "15": 0.95,
+    "20": 1.0
+  },
+  "dimensions": [
+    {
+      "embedding_dimension": 512,
+      "selected_models": [
+        {
+          "seed": 20260927,
+          "selected_epoch": 3,
+          "validation_proxy": 0.8715984522039131
+        },
+        {
+          "seed": 20260928,
+          "selected_epoch": 3,
+          "validation_proxy": 0.8659986559665492
+        },
+        {
+          "seed": 20260929,
+          "selected_epoch": 3,
+          "validation_proxy": 0.8794183855860104
+        }
+      ]
+    },
+    {
+      "embedding_dimension": 1024,
+      "selected_models": [
+        {
+          "seed": 20260927,
+          "selected_epoch": 3,
+          "validation_proxy": 0.8924873014738357
+        },
+        {
+          "seed": 20260928,
+          "selected_epoch": 4,
+          "validation_proxy": 0.8762607729481389
+        },
+        {
+          "seed": 20260929,
+          "selected_epoch": 3,
+          "validation_proxy": 0.8799585462915123
+        }
+      ]
+    }
+  ],
+  "validation_proxy": 0.9076214134350626,
+  "validation_metrics": {
+    "5": {
+      "top1": 0.705,
+      "top5": 0.915,
+      "top5_exponential_score": 0.7566327396360201,
+      "mrr": 0.7974450635678572
+    },
+    "10": {
+      "top1": 0.9025,
+      "top5": 0.9775,
+      "top5_exponential_score": 0.9234783853805761,
+      "mrr": 0.9373731060606061
+    },
+    "15": {
+      "top1": 0.95,
+      "top5": 0.9975,
+      "top5_exponential_score": 0.9629770096174403,
+      "mrr": 0.9705833333333334
+    },
+    "20": {
+      "top1": 0.985,
+      "top5": 1.0,
+      "top5_exponential_score": 0.9873975191062143,
+      "mrr": 0.9902083333333332
+    }
+  },
+  "query_proxy": 0.9161533071748337,
+  "query_metrics": {
+    "5": {
+      "top1": 0.7625,
+      "top5": 0.9175,
+      "top5_exponential_score": 0.7986364077577898,
+      "mrr": 0.8327260770860996
+    },
+    "10": {
+      "top1": 0.9,
+      "top5": 0.985,
+      "top5_exponential_score": 0.9225602982802311,
+      "mrr": 0.9374136198945981
+    },
+    "15": {
+      "top1": 0.955,
+      "top5": 0.99,
+      "top5_exponential_score": 0.9646764293559454,
+      "mrr": 0.9711994047619048
+    },
+    "20": {
+      "top1": 0.97,
+      "top5": 0.9975,
+      "top5_exponential_score": 0.9787400933053686,
+      "mrr": 0.9828553921568627
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "protocol": {
+    "cohort": "external player-disjoint validation only",
+    "holdout_read": false,
+    "known_uniform_rank_count": true,
+    "official_rank_balance_assumed": false,
+    "repeats": 10,
+    "move_bag_weight": 0.3,
+    "production_weight": 0.28
+  },
+  "validation": {
+    "players": 400,
+    "players_per_rank": 40,
+    "by_games": {
+      "5": {
+        "individual_score": 0.606872099424306,
+        "balanced_score": 0.6114173954317129,
+        "balanced_minus_individual": 0.004545296007406996,
+        "repeat_score_range": {
+          "individual": [
+            0.5840821317622923,
+            0.6279290638949344
+          ],
+          "balanced": [
+            0.5869836387476494,
+            0.6304290638949345
+          ]
+        }
+      },
+      "10": {
+        "individual_score": 0.6620546612994129,
+        "balanced_score": 0.6591349626964842,
+        "balanced_minus_individual": -0.0029196986029286333,
+        "repeat_score_range": {
+          "individual": [
+            0.6314654471300778,
+            0.6793926806597912
+          ],
+          "balanced": [
+            0.628447255512506,
+            0.6797941876451481
+          ]
+        }
+      },
+      "15": {
+        "individual_score": 0.6773952533142268,
+        "balanced_score": 0.6737514642921768,
+        "balanced_minus_individual": -0.0036437890220499813,
+        "repeat_score_range": {
+          "individual": [
+            0.6556881597037203,
+            0.6915169002187906
+          ],
+          "balanced": [
+            0.65675026948322,
+            0.6857138862480767
+          ]
+        }
+      },
+      "20": {
+        "individual_score": 0.6920350918363622,
+        "balanced_score": 0.682294187645148,
+        "balanced_minus_individual": -0.009740904191214206,
+        "repeat_score_range": {
+          "individual": [
+            0.6920350918363622,
+            0.6920350918363622
+          ],
+          "balanced": [
+            0.682294187645148,
+            0.682294187645148
+          ]
+        }
+      }
+    }
+  }
+}

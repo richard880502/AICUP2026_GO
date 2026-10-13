@@ -1,0 +1,13 @@
+# Install the PyTorch build appropriate for the host CUDA version separately.
+joblib==1.6.0
+matplotlib==3.11.2
+numba==0.67.0
+numpy==2.4.6
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.17.1
+sgfmill==1.1.1
+
+# Development checks required by the team standard.
+mypy==2.3.1
+pylint==4.0.8

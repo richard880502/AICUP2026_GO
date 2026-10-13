@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+if [[ -x "$root/.venv/bin/python" ]]; then
+  python_bin="$root/.venv/bin/python"
+elif [[ -x "$root/competition1_player_identification/.venv/bin/python" ]]; then
+  python_bin="$root/competition1_player_identification/.venv/bin/python"
+else
+  python_bin=python
+fi
+
+mapfile -t staged_targets < <(
+  git diff --cached --name-only --diff-filter=ACMR \
+    | awk '/\.py$/ {print}'
+)
+
+if [[ ${#staged_targets[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+for project in \
+  competition1_player_identification \
+  competition2_rank_prediction; do
+  project_targets=()
+  for target in "${staged_targets[@]}"; do
+    if [[ "$target" == "$project/"*.py ]]; then
+      project_targets+=("${target#"$project/"}")
+    fi
+  done
+  if [[ ${#project_targets[@]} -eq 0 ]]; then
+    continue
+  fi
+  (
+    cd "$root/$project"
+    "$python_bin" -m pylint --jobs=4 "${project_targets[@]}"
+    "$python_bin" -m mypy "${project_targets[@]}"
+  )
+done

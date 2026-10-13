@@ -1,0 +1,158 @@
+{
+  "protocol": {
+    "training_players": 1700,
+    "inner_validation_players": 300,
+    "external_validation_players": 400,
+    "games_per_player": 20,
+    "holdout_read": false,
+    "encoder_note": "frozen d96_h encoders saw two games from selected training players; external validation and holdout remain unseen"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 2.1806328408420086,
+      "validation_nll": 1.8296860456466675,
+      "validation_score": 0.5404139042136248
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.6090141013264656,
+      "validation_nll": 1.4284818172454834,
+      "validation_score": 0.6112686763339218
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.3060054443776608,
+      "validation_nll": 1.4230083227157593,
+      "validation_score": 0.5957570688828743
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.2797289788722992,
+      "validation_nll": 1.3833842277526855,
+      "validation_score": 0.6042825801941006
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.2194299697875977,
+      "validation_nll": 1.3984527587890625,
+      "validation_score": 0.6031858632945889
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.2263367660343647,
+      "validation_nll": 1.412651538848877,
+      "validation_score": 0.615992429495565
+    },
+    {
+      "epoch": 7,
+      "train_loss": 1.194610994309187,
+      "validation_nll": 1.4567577838897705,
+      "validation_score": 0.606456566554422
+    },
+    {
+      "epoch": 8,
+      "train_loss": 1.1930778175592422,
+      "validation_nll": 1.3816934823989868,
+      "validation_score": 0.6253727129270883
+    },
+    {
+      "epoch": 9,
+      "train_loss": 1.198406107723713,
+      "validation_nll": 1.4629051685333252,
+      "validation_score": 0.5762492288952195
+    },
+    {
+      "epoch": 10,
+      "train_loss": 1.1201562229543924,
+      "validation_nll": 1.4213224649429321,
+      "validation_score": 0.5887775569095774
+    },
+    {
+      "epoch": 11,
+      "train_loss": 1.120902856811881,
+      "validation_nll": 1.4473762512207031,
+      "validation_score": 0.5966444567749223
+    },
+    {
+      "epoch": 12,
+      "train_loss": 1.0997943487018347,
+      "validation_nll": 1.4562065601348877,
+      "validation_score": 0.5917113746058151
+    },
+    {
+      "epoch": 13,
+      "train_loss": 1.0725183729082346,
+      "validation_nll": 1.4382251501083374,
+      "validation_score": 0.6120265163215767
+    },
+    {
+      "epoch": 14,
+      "train_loss": 1.0688056480139494,
+      "validation_nll": 1.437726616859436,
+      "validation_score": 0.6103835848510054
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.9850415382534266,
+      "validation_nll": 1.478916049003601,
+      "validation_score": 0.5965775389440294
+    },
+    {
+      "epoch": 16,
+      "train_loss": 1.0227490290999413,
+      "validation_nll": 1.4690070152282715,
+      "validation_score": 0.6007527811254816
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.9850534293800592,
+      "validation_nll": 1.4888521432876587,
+      "validation_score": 0.5934601187846843
+    },
+    {
+      "epoch": 18,
+      "train_loss": 1.0141935423016548,
+      "validation_nll": 1.4478905200958252,
+      "validation_score": 0.5915775389440294
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.9649483822286129,
+      "validation_nll": 1.4911671876907349,
+      "validation_score": 0.609358073539779
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.9281329959630966,
+      "validation_nll": 1.4884364604949951,
+      "validation_score": 0.606693918515374
+    }
+  ],
+  "external_validation": {
+    "by_games": {
+      "5": {
+        "score": 0.5921531543140559,
+        "top1": 0.437,
+        "nll": 1.3805752992630005
+      },
+      "10": {
+        "score": 0.6292425515199132,
+        "top1": 0.47225,
+        "nll": 1.2444870471954346
+      },
+      "15": {
+        "score": 0.6448513351522988,
+        "top1": 0.49025,
+        "nll": 1.2014554738998413
+      },
+      "20": {
+        "score": 0.6479290638949345,
+        "top1": 0.4925,
+        "nll": 1.1652660369873047
+      }
+    },
+    "score": 0.6285440262203006,
+    "nll": 1.24794602394104
+  }
+}
