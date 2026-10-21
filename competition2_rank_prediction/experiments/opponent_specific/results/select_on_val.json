@@ -1,0 +1,38 @@
+{
+  "borrowed d96_h2 (current default)": {
+    "opp_member_nll": 1.7798899412155151,
+    "question_score": 0.6873810121965697,
+    "minus_default": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "opponent-specific head": {
+    "opp_member_nll": 1.7898883819580078,
+    "question_score": 0.6828395751708163,
+    "minus_default": [
+      -0.0045414370257535214,
+      -0.007621770581005361,
+      -0.0015258774226981362
+    ]
+  },
+  "opponent-specific full": {
+    "opp_member_nll": 1.7593814134597778,
+    "question_score": 0.6915390423362768,
+    "minus_default": [
+      0.004158030139707139,
+      1.8756863869578588e-05,
+      0.008467180032444016
+    ]
+  },
+  "opponent-specific scratch": {
+    "opp_member_nll": 1.762817621231079,
+    "question_score": 0.6935215396414446,
+    "minus_default": [
+      0.006140527444874939,
+      0.00049868151460173,
+      0.012204507928548223
+    ]
+  }
+}

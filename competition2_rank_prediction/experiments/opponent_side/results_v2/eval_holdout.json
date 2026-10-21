@@ -1,0 +1,51 @@
+{
+  "production best2: d96_h + resnet8c_h": {
+    "score": 0.6608562974246479,
+    "se": 0.0187202056898775,
+    "weights": {
+      "d96_h": 0.882,
+      "resnet8c_h": 0.414
+    }
+  },
+  "best2 + opponent (weights fitted on validation)": {
+    "score": 0.6808305708802915,
+    "se": 0.017483053010300342,
+    "weights": {
+      "d96_h": 0.712,
+      "resnet8c_h": 0.292,
+      "d96_h_opp": 0.483
+    }
+  },
+  "d96_h alone": {
+    "score": 0.6441335848510054,
+    "se": 0.018711368484403256,
+    "weights": {
+      "d96_h": 1.03
+    }
+  },
+  "d96_h + opponent (weights fitted on validation)": {
+    "score": 0.6837320778656485,
+    "se": 0.017615086720212107,
+    "weights": {
+      "d96_h": 0.776,
+      "d96_h_opp": 0.566
+    }
+  },
+  "opponent alone": {
+    "score": 0.6738487624978632,
+    "se": 0.017410374910537145,
+    "weights": {
+      "d96_h_opp": 0.898
+    }
+  },
+  "[best2 + opponent (weights fitted on validation)] minus [production best2: d96_h + resnet8c_h]": [
+    0.01997427345564351,
+    -0.0026710548367330092,
+    0.04301819161757163
+  ],
+  "[d96_h + opponent (weights fitted on validation)] minus [d96_h alone]": [
+    0.03959849301464303,
+    0.011956081838071876,
+    0.06790150698535698
+  ]
+}

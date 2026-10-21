@@ -1,8 +1,6 @@
 # Competition 2 (rank prediction) - folder index
 
-Repository directory: `competition2_rank_prediction/`. On the research
-machine, competition 1 is reused read-only through a local `c1` symlink and
-the official training data is mounted at `data/`; neither is tracked by Git.
+Working directory: `/tmp2/richard/rank_prediction/`. Competition 1 is reused read-only through the `c1` symlink; the official training data is `data/`.
 
 ## Which document to read
 | file | what it is | authoritative for |
@@ -19,15 +17,19 @@ the official training data is mounted at `data/`; neither is tracked by Git.
 - Inference: `predict_test.py` (`--model-set best2|full4`, `--suffix _h` for holdout-excluded models, `--balanced`/`--use-aggregator` off by default).
 
 ## Data and artifacts
-- `features/`: `feat96/{train,val,holdout}` dense features (production), `feat`, `feat_value` (32-decision legacy), `moves`, `shards`, `holdout` (400-player untouched test + labels), `rehearsal`, `move_embeddings_h`.
+- `features/`: `feat96/{train,val,holdout,holdout2}` dense features (production), `feat96opp/{val,holdout,holdout2}` opponent-side features (production since 2026-10-20), `holdout2` (fresh 400-player cohort), `feat`, `feat_value` (32-decision legacy), `moves`, `shards`, `holdout` (400-player untouched test + labels), `rehearsal`, `move_embeddings_h`.
 - `results/`: only what `predict_test.py` needs (see `results/README.md`). `archive/`: recoverable superseded checkpoints, ablations and early scratch (nothing deleted).
 - `experiments/<name>/`: one directory per experiment with its own README, `results/` and `logs/`. Accepted/rejected status is listed in `CURRENT_BEST.md`; the 2026-10-11/12 additions are
   `loss_and_head`, `opponent_side`, `value_pilot_dense`, `game_level_features`, `dense_data_scale` (all rejected).
 - `logs/`: training and extraction logs of the production pipeline.
 
 ## Test-day checklist (details: METHODS.md section 6)
-1. `scripts/test_to_games.py`; dense extraction on `features/shards/test` (96 decisions, rank_5k/1d/5d, 4 workers on 2 GPUs, about 1.5-2 h); `scripts/prep_test_moves.py`.
-2. `predict_test.py --tests-dir <dir>` -> `submission_rank.csv` (800 rows).
+1. `scripts/test_to_games.py --tests-dir <dir>`; `scripts/run_test_extraction.sh` (player AND opponent dense extraction ->
+   `features/feat96/test`, `features/feat96opp/test`, then final-position features -> `features/final_result/test`;
+   4 KataGo on 2 GPUs, about 3-4 h; `PER_GPU=1` if other jobs fill the GPUs);
+   `scripts/prep_test_moves.py`.
+2. `predict_test.py --tests-dir <dir>` -> `submission_rank.csv` (800 rows). Default since 2026-10-21 = best2 + opponent-specific
+   member (opp_scratch) + shift residual (residual_shift.py); it refuses to run without the opponent / final-result features.
 3. First check whether test players overlap training players and whether a player appears in several questions.
 
 ## Caveat

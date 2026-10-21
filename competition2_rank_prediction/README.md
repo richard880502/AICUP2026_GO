@@ -13,7 +13,26 @@ Start with:
   including rejected experiments and pitfalls.
 - [`INDEX.md`](INDEX.md): source-code, artifact, and test-day map.
 
-## Current result
+## Update 2026-10-21: opponent-side evidence (current default)
+
+The labelled player's **opponents** turned out to be strong evidence of the player's *registered* rank: games are matched by
+the server rank, so averaging the opponents over 5-20 games tracks the label, while the player's own moves keep a persistent
+player-specific offset. (A 2026-10-12 experiment had rejected this idea, but `extract_rank_features.py --opponent` ignored its
+flag and re-extracted the player's own moves; fixed.)
+
+| Step (all internal, player-disjoint) | Result |
+| --- | --- |
+| best2 + dense Transformer applied to the opponent's moves | +0.053 validation, +0.020 old holdout, +0.067 fresh 400-player cohort (0.6535 -> 0.7206) |
+| Pre-registered 2,000-player cross-fitted test: C1 question-level shift residual (opponent distribution, player x opponent pairing, KataGo final-position result proxy) | +0.030 [+0.017, +0.043], passes Holm |
+| same test: C2 Transformer trained to predict the player's rank from the opponent's moves | +0.007 [+0.001, +0.013], passes Holm |
+| C1 + C2 (now the `predict_test.py` default) | 0.6763 -> 0.7170 (+0.041 [+0.027, +0.054]) |
+
+Details: `experiments/opponent_side`, `experiments/fresh_cohort`, `experiments/crossfit_cohort` (with `PREREGISTRATION.md`),
+`experiments/a1d_boundary` (why A and 1D overlap: their playing strength differs by only ~0.2-0.3 rank units, also through the
+opponents). Test day: `scripts/run_test_extraction.sh` (player + opponent passes + final-position features), then
+`predict_test.py`. The sections below describe the state before this update.
+
+## Current result (2026-10-13)
 
 All numbers below are internal player-disjoint evaluations, not official
 leaderboard scores.

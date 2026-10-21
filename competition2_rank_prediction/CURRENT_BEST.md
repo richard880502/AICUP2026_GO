@@ -1,6 +1,6 @@
 # Competition 2 current best
 
-Last verified: 2026-10-07 UTC.
+Last verified: 2026-10-07 UTC (opponent-side section added 2026-10-20).
 
 ## Stable production pipeline
 
@@ -18,6 +18,37 @@ SGF
 
 `predict_test.py` uses this two-model set by default. The previous four-model
 pipeline remains available with `--model-set full4`.
+
+## DEFAULT since 2026-10-21: best2 + opponent-specific member (C2) + shift residual (C1)
+Pre-registered 2,000-player cross-fitted test (`experiments/crossfit_cohort`): default 0.6763; C1 shift residual 0.7061
+(+0.030 [+0.017, +0.043]); C2 opponent-specific Transformer 0.6833 (+0.007 [+0.001, +0.013]); both pass Holm.
+C1 + C2 0.7170 (+0.041, exploratory). Integrated into `predict_test.py` as the default on 2026-10-21 at the user's request
+(`residual_shift.py`; member `opp_scratch`); the integrated script reproduces the evaluation exactly (halves 0.7265 / 0.7075).
+Switches: `--no-residual` (offsets instead of C1), `--opp-model d96` (borrowed member instead of C2), `--no-opp`.
+Test day: `scripts/run_test_extraction.sh` now also writes `features/final_result/test` (needed by C1).
+
+## Previous default (2026-10-20): best2 + opponent-side member
+
+The 2026-10-12 "opponent side rejected" result was a bug (`extract_rank_features.py --opponent` ignored the flag). With the fix,
+the production d96 Transformer applied unchanged to the OPPONENT's 96 decisions of each game, log-fused as a third member
+(weights + offsets fitted on validation only), gives:
+
+| Method | 400-player holdout | validation questions (8,000, 5-fold CV weights/offsets) |
+| --- | ---: | ---: |
+| best2 (default) | 0.6609 | 0.6350 |
+| **best2 + opponent** (`predict_test.py --opp-feat ...`) | **0.6808** | **0.6875** |
+| d96 + opponent (no ResNet) | 0.6837 | 0.6858 |
+| opponent member alone | 0.6738 | 0.6834 |
+
+Paired differences vs best2: holdout +0.020 [-0.003, +0.043], validation +0.053 [+0.040, +0.065] (player bootstrap).
+d96 + opponent vs d96 alone: holdout +0.040 [+0.012, +0.068], validation +0.061 [+0.046, +0.076].
+This is the first direction with a validation interval far from zero; the holdout has been looked at before, so validation is the
+main evidence. Likely mechanism: opponents are matched by the *label* rank, so averaging different opponents over 5-20 games tracks
+the label, while the player's own moves carry a persistent player-specific offset (see `experiments/a1d_boundary`).
+Test-day cost: one extra `extract_rank_features.py --opponent` pass on the test shards (same time as the player pass).
+**Fresh-cohort confirmation (2026-10-20, `experiments/fresh_cohort`):** 400 new players, models `*_h2` retrained without them:
+best2 0.6535 -> best2 + opponent 0.7206, +0.067 [+0.046, +0.090]. Made the `predict_test.py` default on 2026-10-20 at the user's request
+(`--no-opp` = previous best2). Test day: `scripts/run_test_extraction.sh` extracts both passes. Details: `experiments/opponent_side/README.md`.
 
 ## Verified scores
 

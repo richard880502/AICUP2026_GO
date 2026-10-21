@@ -7,7 +7,7 @@ their scores must not be compared as if they were the same task.
 | Directory | Task | Current best internal result |
 | --- | --- | ---: |
 | [`competition1_player_identification/`](competition1_player_identification/) | Identify one player among 400 enrolled candidates | **0.923040** exponential Top-5 score |
-| [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.677955** rank-utility score |
+| [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
 
 Both numbers are offline player-disjoint proxy/holdout results, not official
 leaderboard submissions.
@@ -29,8 +29,11 @@ for the exact method and reproduction commands.
 ## Competition 2: rank prediction
 
 The model must generalize to unseen players and predict one of ten ordered
-ranks. The current candidate combines dense KataGo/HumanSL ordinal models,
-ResNet snapshots, and two cross-game Player-Bag Transformers.
+ranks. The current default (2026-10-21) combines dense KataGo/HumanSL ordinal
+models and ResNet snapshots with evidence from each game's **opponent** (an
+opponent-specific Transformer) and a question-level shift residual that uses
+the opponent distribution and a KataGo game-result proxy; both additions were
+confirmed in a pre-registered 2,000-player cross-fitted test.
 
 Read
 [`competition2_rank_prediction/CURRENT_BEST.md`](competition2_rank_prediction/CURRENT_BEST.md)

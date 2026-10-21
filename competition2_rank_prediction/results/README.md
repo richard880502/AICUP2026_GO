@@ -17,3 +17,7 @@ Large superseded checkpoints and ablation outputs are preserved under
 
 New work belongs under `../experiments/<experiment_name>/results/`, not in
 this directory.
+
+2026-10-20: `val_probs_d96{,_h,_h2}_opp.npz` (the d96 models applied to the validation cohort's opponent decisions; members of the
+new default), and the fresh-cohort retrains `d96_h2_seed*.pt`, `resnet8c_h2*` (exclude features/holdout2/exclude_h2.txt; only for
+experiments/fresh_cohort). `val_probs_resnet8c_h2.npz` is the epoch 5-8 snapshot mean like `val_probs_resnet8c_h.npz`.
