@@ -72,6 +72,9 @@ def parse_arguments() -> argparse.Namespace:
                         help="debug: only the first N games of each shard")
     parser.add_argument("--samples-per-game", type=int, default=32)
     parser.add_argument("--max-visits", type=int, default=1)
+    parser.add_argument("--deterministic", action="store_true",
+                        help="opt-in: fixed board symmetry (nnRandomize = false), so repeated "
+                             "extractions give (nearly) identical features")
     return parser.parse_args()
 
 
@@ -79,36 +82,49 @@ def make_queries(
     request_id: str,
     moves: list[katago.SgfMove],
     turns: list[int],
-    max_visits: int,
-    profiles: tuple[str, ...] = PROFILES,
+    settings: Settings,
 ) -> list[dict[str, object]]:
     """One normal-model query plus one query per HumanSL profile."""
-    queries = [katago.make_analysis_query(request_id, moves, turns, max_visits)]
-    for index, profile in enumerate(profiles):
+    queries = [katago.make_analysis_query(request_id, moves, turns, settings.max_visits)]
+    for index, profile in enumerate(settings.profiles):
         queries.append(
             katago.make_analysis_query(
                 f"{request_id}:h{index}",
                 moves,
                 turns,
-                max_visits,
+                settings.max_visits,
                 katago.AnalysisQueryConfig(False, profile),
             ),
         )
     return queries
 
 
-def policy_features(
-    moves: list[katago.SgfMove],
-    turns: list[int],
-    responses: list[dict[str, object]],
-    key: str,
-) -> np.ndarray:
-    """Returns [len(turns), 3] features of the played move under one policy stream."""
-    by_turn = {int(str(r["turnNumber"])): r for r in responses}
-    return np.asarray(
-        [katago.make_policy_features(moves[t], by_turn[t][key], key) for t in turns],
-        dtype=np.float32,
-    )
+def game_features(moves: list[katago.SgfMove], turns: list[int],
+                  responses: dict[str, list[dict[str, object]]], request_id: str,
+                  n_profiles: int) -> tuple[np.ndarray, np.ndarray]:
+    """[len(turns), 1 + n_profiles, 3] features of the played moves and their validity.
+
+    A decision is invalid (masked) when KataGo rejected the game's query (no response, e.g. a
+    move on an occupied point) or marks the played move illegal (an immediate ko recapture).
+    """
+    streams = [(request_id, "policy")] + [(f"{request_id}:h{h}", "humanPolicy")
+                                          for h in range(n_profiles)]
+    features = np.zeros((len(turns), len(streams), FEATURES_PER_MODEL), np.float32)
+    valid = np.ones(len(turns), np.bool_)
+    for column, (stream_id, key) in enumerate(streams):
+        by_turn = {int(str(r["turnNumber"])): r for r in responses.get(stream_id, [])}
+        for row, turn in enumerate(turns):
+            if not valid[row]:
+                continue
+            if turn not in by_turn:
+                valid[row] = False
+                continue
+            try:
+                features[row, column] = katago.make_policy_features(
+                    moves[turn], typing.cast(list, by_turn[turn][key]), key)
+            except ValueError:
+                valid[row] = False
+    return features, valid
 
 
 @dataclasses.dataclass
@@ -118,6 +134,8 @@ class _Tickets:
     remaining: dict[int, int] = dataclasses.field(default_factory=dict)
     ticket_of: dict[str, int] = dataclasses.field(default_factory=dict)
     ids_of: dict[int, list[str]] = dataclasses.field(default_factory=dict)
+    pending: dict[str, int] = dataclasses.field(default_factory=dict)  # responses still due per id
+    rejected: list[tuple[str, str]] = dataclasses.field(default_factory=list)  # (id, KataGo error)
     responses: dict[int, dict[str, list[dict[str, object]]]] = dataclasses.field(
         default_factory=lambda: collections.defaultdict(dict))
     next_ticket: int = 0
@@ -128,7 +146,9 @@ class PipelinedKataGo:
 
     ``submit`` returns a ticket immediately; ``collect`` blocks until every response of that
     ticket has arrived. A reader thread keeps only the policy field each query needs, which
-    keeps the parsed responses small.
+    keeps the parsed responses small. A query KataGo rejects (e.g. an illegal move in the game
+    record) simply has no responses; the reader keeps draining the engine's output, so one bad
+    game cannot stall the batches in flight. Only an error that names no known query is fatal.
     """
 
     def __init__(self, command: list[str], keep_all: bool = False):
@@ -161,21 +181,31 @@ class PipelinedKataGo:
         for line in self.process.stdout:
             response = json.loads(line)
             with self.lock:
-                if "error" in response:
-                    self.error = str(response["error"])
-                    self.lock.notify_all()
-                    return
-                if response.get("isDuringSearch"):
-                    continue
-                request_id = str(response["id"])
-                ticket = self.tickets.ticket_of[request_id]
-                self.tickets.responses[ticket].setdefault(request_id, []).append(
-                    self._keep(response, request_id))
-                self.tickets.remaining[ticket] -= 1
-                if self.tickets.remaining[ticket] == 0:
-                    self.lock.notify_all()
+                self._handle(response)
         with self.lock:
             self.error = self.error or "KataGo exited"
+            self.lock.notify_all()
+
+    def _handle(self, response: dict) -> None:
+        """Books one engine response (called with the lock held)."""
+        request_id = str(response.get("id"))
+        ticket = self.tickets.ticket_of.get(request_id)
+        if "error" in response:
+            if ticket is None:  # not attributable to a query: give up on the engine
+                self.error = str(response["error"])
+            else:  # the whole query is rejected: none of its responses will come
+                self.tickets.rejected.append((request_id, str(response["error"])))
+                self.tickets.remaining[ticket] -= self.tickets.pending[request_id]
+                self.tickets.pending[request_id] = 0
+            self.lock.notify_all()
+            return
+        if response.get("isDuringSearch") or "turnNumber" not in response or ticket is None:
+            return  # progress reports, warnings
+        self.tickets.responses[ticket].setdefault(request_id, []).append(
+            self._keep(response, request_id))
+        self.tickets.pending[request_id] -= 1
+        self.tickets.remaining[ticket] -= 1
+        if self.tickets.remaining[ticket] == 0:
             self.lock.notify_all()
 
     def submit(self, queries: list[dict[str, object]]) -> int:
@@ -187,8 +217,10 @@ class PipelinedKataGo:
             self.tickets.remaining[ticket] = sum(
                 len(typing.cast(list, q["analyzeTurns"])) for q in queries)
             self.tickets.ids_of[ticket] = [str(query["id"]) for query in queries]
-            for request_id in self.tickets.ids_of[ticket]:
-                self.tickets.ticket_of[request_id] = ticket
+            for query in queries:
+                self.tickets.ticket_of[str(query["id"])] = ticket
+                self.tickets.pending[str(query["id"])] = len(
+                    typing.cast(list, query["analyzeTurns"]))
         for query in queries:
             self.process.stdin.write(json.dumps(query) + "\n")
         self.process.stdin.flush()
@@ -204,6 +236,7 @@ class PipelinedKataGo:
             del self.tickets.remaining[ticket]
             for request_id in self.tickets.ids_of.pop(ticket):
                 del self.tickets.ticket_of[request_id]
+                del self.tickets.pending[request_id]
             return self.tickets.responses.pop(ticket)
 
     def close(self) -> None:
@@ -214,19 +247,26 @@ class PipelinedKataGo:
             self.stderr.close()
 
 
+def parse_moves(sgf_content: object) -> list[katago.SgfMove]:
+    """Main-line moves; tolerates a missing SGF and the old ``tt`` pass notation (setup stones
+    are ignored: scripts/test_to_games.py turns them into moves before extraction)."""
+    if not isinstance(sgf_content, str):
+        return []
+    return katago.parse_sgf_moves(sgf_content.replace("[tt]", "[]"))
+
+
 def prepare_batch(games: pd.DataFrame, start: int,
                   settings: Settings) -> tuple[list[tuple], list[dict[str, object]]]:
     """Parses one batch of games and builds its engine queries."""
     prepared = []
     queries: list[dict[str, object]] = []
     for offset, row in enumerate(games.iloc[start:start + BATCH_GAMES].itertuples()):
-        moves = katago.parse_sgf_moves(row.sgf_content)
+        moves = parse_moves(row.sgf_content)
         turns = katago.sample_player_turns(moves, row.color, settings.samples)
         request_id = str(start + offset)
         prepared.append((start + offset, moves, turns, request_id))
         if turns:
-            queries.extend(make_queries(request_id, moves, turns, settings.max_visits,
-                                        settings.profiles))
+            queries.extend(make_queries(request_id, moves, turns, settings))
     return prepared, queries
 
 
@@ -237,12 +277,8 @@ def fill_batch(responses: dict[str, list[dict[str, object]]], prepared: list, n_
     for index, moves, turns, request_id in prepared:
         if not turns:
             continue
-        columns = [policy_features(moves, turns, responses[request_id], "policy")]
-        for h in range(n_profiles):
-            columns.append(policy_features(moves, turns, responses[f"{request_id}:h{h}"],
-                                           "humanPolicy"))
-        tokens[index, :len(turns)] = np.stack(columns, axis=1)
-        masks[index, :len(turns)] = True
+        tokens[index, :len(turns)], masks[index, :len(turns)] = game_features(
+            moves, turns, responses, request_id, n_profiles)
 
 
 def extract_games(client: PipelinedKataGo, games: pd.DataFrame, settings: Settings,
@@ -272,6 +308,11 @@ def extract_games(client: PipelinedKataGo, games: pd.DataFrame, settings: Settin
     elapsed = time.time() - started
     print(f"[{label}] {len(games)} games  {elapsed:.0f}s  {len(games) / elapsed:.2f} games/s",
           flush=True)
+    rejected = client.tickets.rejected
+    if rejected:
+        print(f"[{label}] KataGo rejected {len(rejected)} queries (decisions masked), "
+              f"first: {rejected[0]}", flush=True)
+        rejected.clear()
     return out
 
 
@@ -292,9 +333,11 @@ def save_features(path: pathlib.Path, games: pd.DataFrame, tokens: np.ndarray,  
 
 
 def start_engine(root: pathlib.Path, device: int, human: bool = True,
-                 keep_all: bool = False) -> PipelinedKataGo:
+                 keep_all: bool = False, deterministic: bool = False) -> PipelinedKataGo:
     """Starts one KataGo process on ``device`` using the fast config template."""
     template = (root / "configs/analysis_fast.cfg.tmpl").read_text(encoding="utf-8")
+    if deterministic:
+        template += "nnRandomize = false\nnnRandSeed = rank_prediction\n"
     with tempfile.NamedTemporaryFile("w", suffix=".cfg", delete=False,
                                      encoding="utf-8") as config:
         config.write(template.replace("@DEVICE@", str(device)))
@@ -329,7 +372,7 @@ def main() -> None:
           flush=True)
     if not pending:
         return
-    client = start_engine(root, args.device)
+    client = start_engine(root, args.device, deterministic=args.deterministic)
     try:
         for shard in pending:
             games = pd.read_csv(shard)

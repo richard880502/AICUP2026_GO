@@ -12,9 +12,11 @@
 - Local submission: `production/rank_20261030/submission_rank.csv`.
 - SHA-256: `7f222f69ed81e7b94d14e2e6cb7a77528bba1275b9aa59278ec063b391b3e2f0`.
 
-The archived run used the later local research workspace under
-`runtime/competition2_research/`; it includes post-2026-10-21 input validation
-and fallback handling that are not yet fully synchronized to the tracked
-`competition2_rank_prediction/` source. The local output, models, data and
-features are intentionally excluded from Git. The Public score is not an
-estimate of the unseen Private score.
+The archived run used the local research workspace under
+`runtime/competition2_research/`. The relevant extraction, input validation,
+prediction, and submission validation source was subsequently synchronized
+to `competition2_rank_prediction/`. The local output, models, data and
+features are intentionally excluded from Git. KataGo extraction uses random
+symmetry, so a fresh extraction is not guaranteed to produce identical CSV
+bytes or the same official score. The Public score is not an estimate of the
+unseen Private score.

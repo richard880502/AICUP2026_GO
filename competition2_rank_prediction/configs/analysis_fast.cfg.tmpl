@@ -1,9 +1,9 @@
 # KataGo analysis config template; @DEVICE@ is filled in by the extractor.
 # 1-visit raw-policy queries: concurrency is capped by numAnalysisThreads, so keep it high.
 # Positions are never repeated, so the NN cache is kept small (saves several GB of RAM).
-numAnalysisThreads = 160
+numAnalysisThreads = 512
 numSearchThreadsPerAnalysisThread = 1
-nnMaxBatchSize = 256
+nnMaxBatchSize = 512
 numNNServerThreadsPerModel = 2
 cudaDeviceToUseThread0 = @DEVICE@
 cudaDeviceToUseThread1 = @DEVICE@

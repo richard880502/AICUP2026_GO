@@ -18,6 +18,8 @@ import rank_lib as lib
 
 RANKS = np.arange(10)
 LAMBDA = 0.01
+FINAL_NAMES = ("final_winrate", "final_score_lead", "n_moves", "last_move_by_player",
+               "ended_two_passes", "leading_black_stones")
 
 
 def load_final(directory: pathlib.Path) -> dict[str, np.ndarray]:

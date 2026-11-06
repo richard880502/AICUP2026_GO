@@ -7,7 +7,8 @@ submission. All 800 Public and Private questions used the default C1+C2
 pipeline, with no fallback. The Private score has not yet been disclosed.
 See [the submission record](docs/public_submission_20261030.md).
 
-Last verified: 2026-10-07 UTC (opponent-side section added 2026-10-20).
+Last updated: 2026-11-06 (official Public result and production source sync).
+The internal C1+C2 experiment was registered and evaluated on 2026-10-21.
 
 ## Stable production pipeline
 
@@ -33,6 +34,11 @@ C1 + C2 0.7170 (+0.041, exploratory). Integrated into `predict_test.py` as the d
 (`residual_shift.py`; member `opp_scratch`); the integrated script reproduces the evaluation exactly (halves 0.7265 / 0.7075).
 Switches: `--no-residual` (offsets instead of C1), `--opp-model d96` (borrowed member instead of C2), `--no-opp`.
 Test day: `scripts/run_test_extraction.sh` now also writes `features/final_result/test` (needed by C1).
+
+The tracked extraction, SGF validation, prediction and submission-checking
+code has been synchronized with the local workspace that produced the official
+submission. See [recent experiment findings](docs/recent_experiments.md) for
+the 2026-10-22 through 2026-11-04 investigations and their limitations.
 
 ## Previous default (2026-10-20): best2 + opponent-side member
 

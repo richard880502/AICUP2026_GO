@@ -55,6 +55,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--visits", type=int, default=64)
     ap.add_argument("--worker", type=int, default=0)
     ap.add_argument("--num-workers", type=int, default=1)
+    ap.add_argument("--deterministic", action="store_true",
+                    help="opt-in: fixed board symmetry (nnRandomize = false)")
     return ap.parse_args()
 
 
@@ -85,7 +87,7 @@ def shard_values(client: base.PipelinedKataGo, games: pd.DataFrame, visits: int)
         prepared, queries = [], []
         for offset, row in enumerate(games.iloc[start:start + BATCH].itertuples()):
             i = start + offset
-            moves = katago.parse_sgf_moves(row.sgf_content)
+            moves = base.parse_moves(row.sgf_content)
             values[i, 2:] = sgf_facts(moves, row.color)
             if moves:
                 queries.append(katago.make_analysis_query(str(i), moves, [len(moves)], visits))
@@ -111,7 +113,8 @@ def main() -> None:
     print(f"{len(pending)} shard(s)", flush=True)
     if not pending:
         return
-    client = base.start_engine(ROOT, args.device, human=False, keep_all=True)
+    client = base.start_engine(ROOT, args.device, human=False, keep_all=True,
+                               deterministic=args.deterministic)
     try:
         for shard in pending:
             games = pd.read_csv(shard)
