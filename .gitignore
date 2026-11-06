@@ -38,6 +38,10 @@ logs/
 *.log
 submission*.csv
 
+# Machine-local research state and official production artifacts
+runtime/
+production/
+
 # One-off Competition 2 scratch analyses superseded by documented modules
 competition2_rank_prediction/analysis_*.py
 competition2_rank_prediction/eval_dense_*.py

@@ -13,6 +13,10 @@ Start with:
   including rejected experiments and pitfalls.
 - [`INDEX.md`](INDEX.md): source-code, artifact, and test-day map.
 
+The user-reported official Public score for the 2026-10-30 test submission
+is **0.7227214**. The complete record is in
+[`docs/public_submission_20261030.md`](docs/public_submission_20261030.md).
+
 ## Update 2026-10-21: opponent-side evidence (current default)
 
 The labelled player's **opponents** turned out to be strong evidence of the player's *registered* rank: games are matched by

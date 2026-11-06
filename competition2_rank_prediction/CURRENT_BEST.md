@@ -1,5 +1,12 @@
 # Competition 2 current best
 
+## Official Public result, 2026-11-06
+
+The user reports a Public score of **0.7227214** for the 2026-10-30 test
+submission. All 800 Public and Private questions used the default C1+C2
+pipeline, with no fallback. The Private score has not yet been disclosed.
+See [the submission record](docs/public_submission_20261030.md).
+
 Last verified: 2026-10-07 UTC (opponent-side section added 2026-10-20).
 
 ## Stable production pipeline

@@ -12,6 +12,11 @@ their scores must not be compared as if they were the same task.
 Both numbers are offline player-disjoint proxy/holdout results, not official
 leaderboard submissions.
 
+Competition 2's 2026-11-06 submission received **0.7227214 Public**,
+reported by the user. Its Private score is not yet available. The exact
+submission record is in
+[`competition2_rank_prediction/docs/public_submission_20261030.md`](competition2_rank_prediction/docs/public_submission_20261030.md).
+
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
@@ -52,6 +57,31 @@ small JSON reports, and research documentation. It intentionally excludes:
 Those artifacts remain on the research machine and must be restored separately
 to reproduce GPU inference. Each competition directory documents its expected
 local paths.
+
+## Local machine layout
+
+All Go-related machine-local state is consolidated below this repository:
+
+```text
+AICUP2026_GO/
+├── competition1_player_identification/  # tracked task-1 source and reports
+├── competition2_rank_prediction/        # tracked task-2 source and reports
+├── data/                                # licensed training and official tests
+├── runtime/
+│   ├── competition1_research/           # venv, models, feature caches
+│   ├── competition2_research/           # full historical task-2 workspace
+│   └── tutorial_review/                 # official tutorial reproduction
+└── production/
+    ├── 20261030/                        # task-1 resumable test features
+    └── rank_20261030/                   # task-2 features and submission
+```
+
+`data/`, `runtime/`, and `production/` are intentionally ignored by Git.
+The official tutorial review remains accessible at the separate
+`/tmp2/richard/aicup_tutorial_review` entry. The old task and data symlinks
+are kept under `runtime/legacy_paths/` for reference; historical scripts and
+SQLite indexes that embed the former absolute `/tmp2/richard/...` locations
+may need their paths updated before they can be rerun.
 
 ## Development checks
 
