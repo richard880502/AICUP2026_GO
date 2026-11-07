@@ -3,6 +3,15 @@
 Independent experiment for GitHub issue #1. Uses the existing 2,000-player
 C1+C2 OOF cache; no KataGo extraction or encoder training is required.
 
+Completed pilot: [RESULTS.md](RESULTS.md). Follow-up train/OOF, calibration,
+subgroup and feature-redundancy analysis: [DIAGNOSTICS.md](DIAGNOSTICS.md).
+The diagnostics reproduce the pilot predictions exactly and support stopping
+the frozen MLP expert expansion. Both reports are exploratory internal results.
+
+The isolated terminal-winrate volatility follow-up is recorded in
+[VOLATILITY_RESULTS.md](VOLATILITY_RESULTS.md): positive rank-error association
+in both halves, but no utility improvement from the fixed scalar correction.
+
 From the repository root:
 
 ```bash
