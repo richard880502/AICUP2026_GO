@@ -26,6 +26,12 @@ See [the official record](docs/public_v2_20261111.md) and
 
 ## Current best offline result
 
+The [new mixed-color 600-way experiment](experiments/open_set_v2/README.md)
+is in progress. Its [phase-one record](experiments/open_set_v2/PHASE1_RESULTS.md)
+reports validation-only controls and a 0.124733 exploratory fusion before
+engine-profile training. A separate 600-player final cohort remains unopened;
+these numbers are not the official Public score or the historical proxy below.
+
 **0.923040** mean exponential Top-5 score on the independent 400-way proxy.
 This is an offline research result, not a competition leaderboard score. It
 adds a group-softmax Top-20 hard-negative reranker to the reproducible

@@ -1,68 +1,137 @@
 # Open-set v2 player matching
 
-Status, 2026-11-11: protocol manifests prepared; no encoder has been trained
-and no new score is claimed. The current official Public remains **0.5236602**.
+**In progress, 2026-11-11.** Phase-one controls have run; engine extraction and
+open-set rich-profile training are underway. No final-holdout result or new
+submission is claimed. Official Public remains **0.5236602**.
 
-The training index contains 1,000,000 rows and 8,007 players. Of these, 6,651
-have at least 15 games and at least five games in each color. A fixed seed
-(20261111) reserves 600 eligible players for model selection and another 600
-for a final report, leaving 6,807 training players. Official test and candidate
-files do not enter this split.
+[Phase-one findings](PHASE1_RESULTS.md) · [Training and validation figure](figures/phase1_summary.svg)
 
-Each evaluation cohort has 600 candidates, ten reference games per candidate,
-and 2,400 questions, balanced across query counts 1/2/3/5. Query games are
-disjoint from reference row pointers. Query subsets are nested across counts;
-confidence intervals must therefore bootstrap players, not individual questions.
-Both colors are allowed without forcing an artificial 50:50 query ratio.
+## Verified protocol
 
-Generate the immutable manifests from the repository root:
+The actual training CSVs contain 1,000,000 games and 8,007 players. Reserve
+600 mixed-color eligible players for model selection and another 600 for the
+final report. The other **6,807 players / 827,101 games** remain eligible for
+training after excluding evaluation game content. The first engine pass caps
+training at 16 games per player, making **120,561 games** including both
+9,000-game evaluation cohorts. This cap is a first-pass resource choice;
+it does not mean features exist for every remaining training game.
+
+Each evaluation cohort has 600 candidates and ten references per candidate.
+Each player supplies nested 1/2/3/5-game queries, giving 2,400 questions per
+cohort. Reference and query contents are distinct. Both colors are allowed
+without imposing an artificial 50:50 query ratio. Bootstrap players rather
+than the correlated individual questions.
+
+Source/cache ID, color, rank and row count alignment is checked across all
+1,000,000 records. Original input files have local SHA-256 fingerprints.
+The locked split verifies **zero player overlap and zero game-content
+fingerprint overlap** across train, validation and final holdout. Fingerprints
+use every move, including beyond the model's 384-token cache, and ignore HD
+so metadata differences cannot conceal identical analyzed move sequences.
+The input SHA and locked split indices are verified on repeat preparation.
+
+The original pointer-only manifest is superseded. The SQLite index's old
+relative paths are not used. Preparation now reads the current CSVs directly:
 
 ```bash
 runtime/competition1_research/.venv/bin/python -m \
   competition1_player_identification.experiments.open_set_v2.prepare
 ```
 
-Output: `production/open_set_v2_20261111/manifests/`. An existing directory is
-never overwritten. `summary.json` contains manifest hashes and audit counts.
+Output stays inside `production/open_set_v2_20261111/`; licensed data, models,
+arrays and intermediate artifacts are ignored by Git. Canonical split:
+`clean_splits.npz`; evidence: `source_audit.json`, `split_audit.json`,
+`engine_inputs/export.json`. Superseded pre-audit runs are in the nested
+`archive/pre_hd_audit/`, not mixed with the current run.
 
-## Required gates before fitting
+## Engine representation and resources
 
-- Read indexed CSV rows and verify player/color/path consistency.
-- Hash the actual SGF move sequences; remove query/reference duplicates and
-  games shared between train, validation and final holdout. Player separation
-  alone cannot guarantee game separation: the same game may appear for both
-  opponents. The current manifests explicitly mark this audit as pending.
-- Audit the actual SGF metadata, game length and color distribution against
-  the published v2 rules. The eligible-player selection must be reported as
-  a cohort restriction; this proxy is not guaranteed to match leaderboard data.
-- Fit all preprocessing and feature reliability weights on training players.
-  Select checkpoints and blends on validation only. Keep final-holdout
-  outcomes unopened until a fixed configuration is selected.
+Source v1.1 includes HD0 through HD9: **207,390 / 1,000,000 games have HD > 0**.
+No setup-stone AB/AW records were found in the source audit. As a controlled
+comparison with the current best method, this experiment uses its established
+moves-only Japanese-rules / 6.5-komi analysis proxy, not a claimed reconstruction
+of true game rules. Do not infer missing stones or actual komi from HD alone.
+[Official dataset version notes](https://github.com/AILAB-NDHU/aicup2026-go-dataset/blob/main/README.md)
+confirm that v1.1 adds HD while keeping moves unchanged.
 
-## Experiment sequence
+Use normal KataGo b18c384nbt plus HumanSL rank_5k / rank_1d / rank_5d,
+64 sampled decisions, one visit, ownership transitions, and the production
+9,198-dimensional multi-scale rich-profile aggregation. Existing historical
+HumanSL caches cover only the old 400-player cohort and cannot replace this
+new extraction.
 
-1. Establish a frozen rich-profile and opening-sequence baseline on the new
-   validation protocol. Report exponential Top-5 score, Top1/5/20 and each
-   query-count/color subgroup, with player-bootstrap uncertainty.
-2. Train a new open-set encoder on the 6,807 other players using episodic
-   ten-reference and 1/2/3/5-query matching with both colors. Keep existing
-   production encoders frozen as controls. Existing HumanSL caches cover
-   400 players / 40,000 reference games, not all 6,807 players; cache expansion
-   is necessary, and its coverage must be checked before launching training.
-3. Add opening prefix / sequence matching and a raw both-player move encoder.
-   Preserve perspective and color; fit fusion only on validation.
-4. Compare centroid similarity against game-to-game similarity aggregated over
-   ten references, then learned pair scoring. Start with mean/top-k/log-mean-exp
-   aggregation, and use validation to choose rather than assume an improvement.
-5. Add the Competition 2 rank model as a soft prior. Calibrate rank uncertainty
-   and measure true-player recall before testing any hard candidate pruning.
+GPU0 and GPU1 now claim shared immutable shards with `--dynamic-shards`.
+OS file locks prevent simultaneous writers, survive interrupted workers
+without stale ownership, and allow the faster GPU to do more work. The flag
+is opt-in; the original production extractor's default allocation is retained.
+Other users' vLLM, llama-server and training services are not stopped.
+Global progress is the saved shard count; per-worker ETA is not a combined ETA.
 
-Only the best fixed configuration is evaluated on final holdout. Actual
-leaderboard submissions are reported separately from this training-only proxy.
+`followup.py --engine-pid <pid0> <pid1>` observes the exact live extractors,
+then checks completeness, builds rich profiles with eight CPU workers, runs a
+frozen Fisher baseline, fits 512D / 1024D encoders, and selects validation-only
+fusion. Incomplete terminated extraction is an error; the watcher never
+silently restarts an extractor.
+
+## Experiment sequence and status
+
+1. **Protocol / controls: done.** Opening statistics, symmetry-invariant
+   opening-prefix matches and both-player move encoder controls have run.
+   Query-count, query-color and clustered-uncertainty reports are saved.
+   The rich-profile control waits for extraction.
+2. **Open-set rich-profile encoders: queued after extraction.** ArcFace plus
+   supervised contrastive and episodic few-reference/few-query loss. Every
+   normalization and classifier identity is training-only. Tiny training
+   libraries use fewer distinct references/queries; singleton identities
+   contribute ArcFace only. Evaluation always uses ten references.
+3. **Raw sequence / opening fusion: first pass done.** Three-layer 128D
+   move Transformer, attention pooling and normalized 256D game embeddings;
+   both absolute and target-relative color are encoded, with D8 augmentation.
+   Opening-prefix IDF matching covers lengths 4/8/16/32/64.
+4. **Game-to-game matching: fixed aggregators implemented.** Centroid,
+   all-pair mean, per-query top-three and log-mean-exp reference aggregation
+   are compared on exactly the same games. Learned pair scoring remains to
+   be implemented and evaluated after the rich-profile encoder is frozen.
+5. **Clean rank prior: first pass done.** Freshly train Competition 2's raw
+   four-layer 192D ordinal move architecture; 300 inner training players pick
+   checkpoint and temperature. No style-validation identities enter rank
+   training. This is the raw rank branch, **not full C1+C2**. Rank remains a
+   soft fusion feature, never a hard candidate filter.
+
+After the engine and learned-matching ablations, lock a complete configuration
+and compare it with the fixed baseline on the final 600-player cohort once.
+That final evaluation, independent confirmation, complete findings and any
+new submission are **not yet done**. Validation-selected gains are exploratory.
+
+## Reproduce the early controls
+
+Run from the repository root, after `prepare`:
+
+```bash
+export PYTHONPATH=.:competition1_player_identification
+export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.opening
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.prefix
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.train --kind opening
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.train --kind sequence
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.rank_prior
+runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.fusion
+MPLBACKEND=Agg runtime/competition1_research/.venv/bin/python -m competition1_player_identification.experiments.open_set_v2.report
+```
+
+Completed encoder fits and immutable data inputs are not overwritten. To
+rerun an encoder deliberately, choose a separate `--output`. Phase-one fusion
+scores are snapshotted so later engine fusion cannot relabel the early figure.
 
 ## Checks
 
-`pylint competition1_player_identification/experiments/open_set_v2` scores
-10/10; `mypy` on the same target passes. The repository pre-commit hook runs
-both tools. The Redmine infra source document is unavailable in this session;
-existing local hooks are used, without claiming verification against that text.
+Run pylint and mypy on `experiments/open_set_v2` and the updated production
+extractor; the local pre-commit hook repeats both. Run `python -m unittest
+competition1_player_identification.experiments.open_set_v2.test_invariants`.
+Tests cover content/player separation, disjoint episodes, singleton handling,
+D8/color/pass invariants, exact contest scoring, ordinal normalization,
+autocast compatibility, exclusive shard writers and OS-lock recovery.
+
+The Redmine infra document is unavailable in this session. The configured,
+executable local hooks are used; verification against that original document
+is not claimed.

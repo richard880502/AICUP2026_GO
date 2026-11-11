@@ -17,8 +17,10 @@ Example:
 
 import argparse
 import collections.abc
+import contextlib
 import csv
 import dataclasses
+import fcntl
 import json
 import pathlib
 import time
@@ -71,6 +73,7 @@ class ExtractionGroup:
     name: str
     records: list[GameRecord]
     output_root: pathlib.Path
+    dynamic_shards: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -103,6 +106,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--shard-size", type=int, default=128)
     parser.add_argument("--worker-index", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=1)
+    parser.add_argument("--dynamic-shards", action="store_true")
     return parser.parse_args()
 
 
@@ -331,6 +335,66 @@ def _write_metadata(
     metadata_path.write_text(serialized, encoding="utf-8")
 
 
+@contextlib.contextmanager
+def claim_shard(
+    path: pathlib.Path,
+    enabled: bool,
+) -> collections.abc.Iterator[bool]:
+    """Claims a shared shard without stale locks after a process terminates.
+
+    Yields:
+        Whether this worker exclusively owns the shard until context exit.
+    """
+    if not enabled:
+        yield True
+        return
+    # Keep the lock inode: deleting it can let two workers lock different files.
+    with path.with_suffix(".lock").open("a+b") as lock_file:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _produce_shard(
+    client: katago.KataGoClient,
+    records: collections.abc.Sequence[GameRecord],
+    config: ExtractionConfig,
+    path: pathlib.Path,
+) -> None:
+    tokens, masks = _extract_shard(
+        client,
+        records,
+        config,
+        f"{path.parent.name}:{path.stem}",
+    )
+    _atomic_save(path, {
+        "tokens": tokens,
+        "masks": masks,
+        "group_indices": np.asarray(
+            [record.group_index for record in records], dtype=np.int32,
+        ),
+        "record_ids": np.asarray([record.record_id for record in records]),
+    })
+
+
+def _completed_games(
+    root: pathlib.Path,
+    total: int,
+    size: int,
+) -> int:
+    completed = 0
+    for path in root.glob("shard_*.npz"):
+        index = int(path.stem.rsplit("_", 1)[1])
+        completed += max(0, min(size, total - index * size))
+    return completed
+
+
 def _extract_group(
     client: katago.KataGoClient,
     group: ExtractionGroup,
@@ -347,37 +411,39 @@ def _extract_group(
                            len(group.records),
                            config.num_workers * config.shard_size)
     )
+    if group.dynamic_shards:
+        total = len(group.records)
     for shard_index, shard_records in enumerate(
         _chunks(group.records, config.shard_size),
     ):
-        if shard_index % config.num_workers != config.worker_index:
+        if not group.dynamic_shards and (
+            shard_index % config.num_workers != config.worker_index
+        ):
             continue
         shard_path = group_root / f"shard_{shard_index:05d}.npz"
         if shard_path.exists():
             completed += len(shard_records)
             continue
-        tokens, masks = _extract_shard(
-            client,
-            shard_records,
-            config,
-            f"{group.name}:{shard_index}",
-        )
-        _atomic_save(
-            shard_path,
-            {
-                "tokens": tokens,
-                "masks": masks,
-                "group_indices": np.asarray(
-                    [record.group_index for record in shard_records],
-                    dtype=np.int32,
-                ),
-                "record_ids": np.asarray(
-                    [record.record_id for record in shard_records],
-                ),
-            },
-        )
+        with claim_shard(shard_path, group.dynamic_shards) as acquired:
+            if not acquired:
+                continue
+            if shard_path.exists():
+                completed += len(shard_records)
+                continue
+            _produce_shard(
+                client,
+                shard_records,
+                config,
+                shard_path,
+            )
         completed += len(shard_records)
         processed += len(shard_records)
+        if group.dynamic_shards:
+            completed = _completed_games(
+                group_root,
+                total,
+                config.shard_size,
+            )
         rate = processed / max(time.monotonic() - started, 1e-6)
         remaining_seconds = (total - completed) / max(rate, 1e-6)
         print(
@@ -447,13 +513,21 @@ def main() -> None:
         _extract_group(
             client,
             ExtractionGroup(
-                "candidates", candidates, arguments.output,
+                "candidates",
+                candidates,
+                arguments.output,
+                arguments.dynamic_shards,
             ),
             config,
         )
         _extract_group(
             client,
-            ExtractionGroup("queries", queries, arguments.output),
+            ExtractionGroup(
+                "queries",
+                queries,
+                arguments.output,
+                arguments.dynamic_shards,
+            ),
             config,
         )
 

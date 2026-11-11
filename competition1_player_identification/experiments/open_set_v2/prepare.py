@@ -1,145 +1,59 @@
-"""Creates immutable player splits and v2 retrieval task manifests.
+"""Prepares and verifies the training-only, mixed-color v2 experiment data.
 
 Run from the repository root:
     python -m competition1_player_identification.experiments.open_set_v2.prepare
 
-Only the training SQLite index is read. Official candidate and test files are
-excluded. SGF-content deduplication must run before training or evaluation.
+Unlike the superseded pointer-only manifest, this entry point reads actual
+CSV content, rejects changed sources, and verifies existing locked splits.
 """
 
 import argparse
-import collections
-import hashlib
-import json
-import pathlib
-import random
-import sqlite3
+import subprocess
+import sys
 
+import numpy as np
 
-QUERY_COUNTS = (1, 2, 3, 5)
+from competition1_player_identification.experiments.open_set_v2 import artifacts
+from competition1_player_identification.experiments.open_set_v2 import dataset
+from competition1_player_identification.experiments.open_set_v2 import (
+    export_engine,
+)
 
-
-def read_games(database: pathlib.Path) -> dict[str, list[dict]]:
-    """Reads game pointers from an existing, read-only training index."""
-    grouped: dict[str, list[dict]] = collections.defaultdict(list)
-    connection = sqlite3.connect(f"file:{database.resolve()}?mode=ro", uri=True)
-    try:
-        for player, path, offset, color in connection.execute(
-            "SELECT player_id, path, offset, color FROM games "
-            "ORDER BY player_id, path, offset",
-        ):
-            if color not in ("B", "W"):
-                raise ValueError(f"Unexpected player color: {color!r}")
-            grouped[player].append({
-                "path": path,
-                "offset": offset,
-                "color": color,
-            })
-    finally:
-        connection.close()
-    return dict(grouped)
-
-
-def make_cohort(
-    players: list[str],
-    games: dict[str, list[dict]],
-    generator: random.Random,
-) -> dict:
-    """Uses ten references and disjoint, nested queries for each player."""
-    references = {}
-    questions = []
-    for player in players:
-        selected = generator.sample(games[player], 15)
-        references[player] = selected[:10]
-        for count in QUERY_COUNTS:
-            questions.append({
-                "question_id": f"{player}_{count}",
-                "player_id": player,
-                "num_games": count,
-                "games": selected[10:10 + count],
-            })
-    return {"references": references, "questions": questions}
-
-
-def prepare(database: pathlib.Path, output: pathlib.Path, seed: int) -> dict:
-    """Writes reproducible splits without consuming any official labels."""
-    if output.exists():
-        raise FileExistsError(f"Refusing to overwrite split directory: {output}")
-    games = read_games(database)
-    eligible = []
-    for player, records in games.items():
-        counts = collections.Counter(record["color"] for record in records)
-        if len(records) >= 15 and min(counts["B"], counts["W"]) >= 5:
-            eligible.append(player)
-    if len(eligible) < 1200:
-        raise ValueError(f"Need 1200 eligible players; found {len(eligible)}")
-    generator = random.Random(seed)
-    generator.shuffle(eligible)
-    splits = {
-        "train": sorted(set(games) - set(eligible[:1200])),
-        "validation": sorted(eligible[:600]),
-        "final_holdout": sorted(eligible[600:1200]),
-    }
-    output.mkdir(parents=True)
-    (output / "players.json").write_text(
-        json.dumps(splits, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    for name, players in (
-        ("validation", splits["validation"]),
-        ("final_holdout", splits["final_holdout"]),
-    ):
-        payload = make_cohort(players, games, generator)
-        (output / f"{name}.json").write_text(
-            json.dumps(payload, indent=2) + "\n",
-            encoding="utf-8",
-        )
-    summary = {
-        "seed": seed,
-        "training_players": len(splits["train"]),
-        "validation_players": len(splits["validation"]),
-        "final_holdout_players": len(splits["final_holdout"]),
-        "eligible_mixed_color_players": len(eligible),
-        "total_games": sum(len(records) for records in games.values()),
-        "candidate_count": 600,
-        "reference_games": 10,
-        "query_counts": QUERY_COUNTS,
-        "questions_per_cohort": 2400,
-        "query_sampling": "uniform games; nested 1/2/3/5; both colors allowed",
-        "player_disjoint": True,
-        "content_deduplication": "pending; must pass before model fitting",
-        "manifest_sha256": {
-            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted(output.glob("*.json"))
-        },
-    }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return summary
+PACKAGE = "competition1_player_identification.experiments.open_set_v2"
 
 
 def main() -> None:
-    """Parses paths and writes the audit summary to standard output."""
+    """Runs idempotent cache preparation without overwriting cohort choices."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--database",
-        type=pathlib.Path,
-        default=pathlib.Path("data/games_with_color.sqlite"),
-    )
-    parser.add_argument(
-        "--output",
-        type=pathlib.Path,
-        default=pathlib.Path("production/open_set_v2_20261111/manifests"),
-    )
-    parser.add_argument("--seed", type=int, default=20261111)
+    artifacts.add_workers(parser)
     arguments = parser.parse_args()
-    print(json.dumps(prepare(
-        arguments.database,
-        arguments.output,
-        arguments.seed,
-    ), indent=2))
+    for command in (
+        ["cache", "--workers", str(arguments.workers)],
+        ["source_audit"],
+    ):
+        subprocess.run(
+            [sys.executable, "-m", f"{PACKAGE}.{command[0]}", *command[1:]],
+            check=True,
+        )
+    root = dataset.ROOT
+    if (root / "clean_splits.npz").exists():
+        dataset.verify_locked_splits(root)
+    else:
+        dataset.build_splits(root, 20261111)
+    if (root / "engine_inputs/global_indices.npy").exists():
+        expected = export_engine.selected_games(root, 16)
+        actual = np.load(root / "engine_inputs/global_indices.npy")
+        if not np.array_equal(expected, actual):
+            raise ValueError(
+                "Existing extraction inputs do not match the locked split"
+            )
+    else:
+        export_engine.export(
+            root,
+            dataset.ROOT.parent.parent / "data/training",
+            16,
+        )
+    print("Training-only preparation and immutable split verification passed")
 
 
 if __name__ == "__main__":
