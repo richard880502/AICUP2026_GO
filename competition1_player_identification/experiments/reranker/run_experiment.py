@@ -427,6 +427,20 @@ def _task_rows(
     )
 
 
+def retrieval_rows(
+    tensors: PairBuildTensors,
+    task: Task,
+    second_weight: float,
+) -> TaskRows:
+    """Builds unlabeled Top-20 features; task.owner selects a query row only."""
+    rows = _task_rows(tensors, task, 20, second_weight)
+    return dataclasses.replace(
+        rows,
+        labels=np.full(20, -1, dtype=np.int64),
+        owners=np.full(20, -1, dtype=np.int64),
+    )
+
+
 def build_pair_dataset(
     data: EmbeddingData,
     tasks: list[Task],

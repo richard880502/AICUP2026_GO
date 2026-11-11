@@ -1,8 +1,28 @@
 # Go player retrieval research
 
-This is the curated source and research record for black-player retrieval from
+This is the curated source and research record for player retrieval from
 anonymous 19x19 SGF records. Large feature caches and model weights are kept
 locally and intentionally excluded from Git.
+
+## Current official v2 Public result
+
+**0.5236602**, reported by the user on 2026-11-11. The frozen-encoder
+submission improves on the candidate-retrained version's **0.4650701** by
+**+0.0585901**. Private performance is unknown. These official mixed-pool
+results must not be described using the historical 0.923040 proxy score.
+
+Original public/private predictions are retained. New 600-player pools use
+the corresponding original pool's fixed 512D/1024D encoder ensemble and
+reranker, retaining source normalization. Only candidate-held-out games
+select dimension blends and reranker strength; no neural weights are updated
+on new pools. Candidate-selection scores are not independent test scores.
+
+The current upload artifact remains local at
+`../production/player_v2_frozen_20261111/submission_player.csv`.
+The inferior upload CSV was removed at the user's request; its feature cache
+and original-pool source models remain because the current method reuses them.
+See [the official record](docs/public_v2_20261111.md) and
+[reproduction instructions](production_pipeline/README.md).
 
 ## Current best offline result
 

@@ -6,11 +6,17 @@ their scores must not be compared as if they were the same task.
 
 | Directory | Task | Current best internal result |
 | --- | --- | ---: |
-| [`competition1_player_identification/`](competition1_player_identification/) | Identify one player among 400 enrolled candidates | **0.923040** exponential Top-5 score |
+| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | **0.923040** on the historical 400-way proxy |
 | [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
 
 Both numbers are offline player-disjoint proxy/holdout results, not official
 leaderboard submissions.
+
+Competition 1's v2 **Public best is 0.5236602**, reported by the user on
+2026-11-11. Frozen original-pool encoders improved on the candidate-retrained
+submission's 0.4650701 (+0.0585901). The v2 score averages original and new
+Public questions and is not comparable to the historical 0.923040 proxy.
+See the [official submission record](competition1_player_identification/docs/public_v2_20261111.md).
 
 Competition 2's 2026-11-06 submission received **0.7227214 Public**,
 reported by the user. Its Private score is not yet available. The exact
@@ -22,10 +28,15 @@ The initial static-analysis baseline and known legacy debt are recorded in
 
 ## Competition 1: player identification
 
-The candidate library contains 100 reference games per player. The current
+The original candidate library contains 100 reference games per player;
+v2 adds 600-player pools with ten games per player and mixed actor colors.
+The research
 pipeline extracts KataGo/HumanSL decision profiles, ownership-spatial features,
 and ArcFace game embeddings, then performs cosine retrieval followed by a
 group-softmax Top-20 reranker.
+For the v2 submission, original-pool encoders and normalization are frozen
+when embedding the new candidate/query pools; neural weights are not refit
+on their ten-game libraries.
 
 Read
 [`competition1_player_identification/README.md`](competition1_player_identification/README.md)

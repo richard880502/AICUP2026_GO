@@ -20,7 +20,7 @@ import typing
 import numpy as np
 import torch
 
-from experiments.reranker import run_experiment
+from competition1_player_identification.experiments.reranker import run_experiment
 
 
 DEFAULT_OUTPUT = pathlib.Path(
@@ -200,10 +200,10 @@ def _reranked_ranks(
             dataset.stage1_scores[group_id][candidates],
         )
         blended = weight * neural_scores + (1.0 - weight) * stage1_scores
-        ranking = np.argsort(-blended, kind="stable")
-        reranked[group_id] = int(np.flatnonzero(
-            candidates[ranking] == owner,
-        )[0]) + 1
+        position = np.flatnonzero(
+            candidates[np.argsort(-blended, kind="stable")] == owner,
+        )
+        reranked[group_id] = int(position[0]) + 1
     return stage1_ranks, reranked
 
 
@@ -220,11 +220,11 @@ def _evaluate_scores(
         "stage1": stage1_metrics,
         "reranker_proxy": float(np.mean([
             reranker_metrics[str(count)]["top5_exponential_score"]
-            for count in run_experiment.QUERY_COUNTS
+            for count in reranker_metrics
         ])),
         "stage1_proxy": float(np.mean([
             stage1_metrics[str(count)]["top5_exponential_score"]
-            for count in run_experiment.QUERY_COUNTS
+            for count in stage1_metrics
         ])),
     }
 
@@ -263,7 +263,7 @@ def _metrics_by_count(
     task_counts = dataset.counts[first_indices]
     return {
         str(game_count): _competition_metrics(ranks[task_counts == game_count])
-        for game_count in run_experiment.QUERY_COUNTS
+        for game_count in np.unique(task_counts)
     }
 
 
@@ -376,6 +376,55 @@ def _fit_and_select(
     best = dataclasses.replace(best, history=history)
     model.load_state_dict(best.state)
     return model, best
+
+
+@dataclasses.dataclass
+class ProductionFit:
+    """Stores a fitted reranker and its candidate-only normalization."""
+
+    model: GroupReranker
+    selection: Selection
+    mean: np.ndarray
+    standard_deviation: np.ndarray
+
+
+def fit_production_pairs(
+    training: run_experiment.PairDataset,
+    validation: run_experiment.PairDataset,
+    device: torch.device,
+) -> ProductionFit:
+    """Fits synthetic candidate tasks with the established group-softmax recipe."""
+    torch.manual_seed(20261004)
+    mean, deviation = _normalization(training)
+    arguments = argparse.Namespace(
+        learning_rate=1e-3,
+        weight_decay=1e-3,
+        seed=20261004,
+        epochs=120,
+        batch_groups=256,
+        patience=20,
+    )
+    model, selection = _fit_and_select(
+        arguments,
+        _group_tensors(training, 20, mean, deviation, device),
+        _group_tensors(validation, 20, mean, deviation, device),
+        validation,
+    )
+    return ProductionFit(model, selection, mean, deviation)
+
+
+def predict_production_pairs(
+    fitted: ProductionFit,
+    dataset: run_experiment.PairDataset,
+    device: torch.device,
+) -> np.ndarray:
+    """Predicts unlabeled candidate-pair logits without computing label metrics."""
+    return _score_rows(
+        fitted.model,
+        _group_tensors(dataset, 20, fitted.mean,
+                       fitted.standard_deviation, device),
+        len(dataset.features),
+    )
 
 
 def _validate_arguments(arguments: argparse.Namespace) -> None:

@@ -50,6 +50,8 @@ class ExtractionConfig:
     engine_batch_size: int
     shard_size: int
     human_profiles: tuple[str, ...]
+    worker_index: int = 0
+    num_workers: int = 1
 
 
 @dataclasses.dataclass(frozen=True)
@@ -99,6 +101,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--max-visits", type=int, default=1)
     parser.add_argument("--engine-batch-size", type=int, default=8)
     parser.add_argument("--shard-size", type=int, default=128)
+    parser.add_argument("--worker-index", type=int, default=0)
+    parser.add_argument("--num-workers", type=int, default=1)
     return parser.parse_args()
 
 
@@ -336,10 +340,18 @@ def _extract_group(
     group_root.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     completed = 0
-    total = len(group.records)
+    processed = 0
+    total = sum(
+        len(group.records[start:start + config.shard_size])
+        for start in range(config.worker_index * config.shard_size,
+                           len(group.records),
+                           config.num_workers * config.shard_size)
+    )
     for shard_index, shard_records in enumerate(
         _chunks(group.records, config.shard_size),
     ):
+        if shard_index % config.num_workers != config.worker_index:
+            continue
         shard_path = group_root / f"shard_{shard_index:05d}.npz"
         if shard_path.exists():
             completed += len(shard_records)
@@ -365,8 +377,8 @@ def _extract_group(
             },
         )
         completed += len(shard_records)
-        elapsed = time.monotonic() - started
-        rate = completed / max(elapsed, 1e-6)
+        processed += len(shard_records)
+        rate = processed / max(time.monotonic() - started, 1e-6)
         remaining_seconds = (total - completed) / max(rate, 1e-6)
         print(
             f"{group.name}: {completed}/{total} games "
@@ -392,9 +404,12 @@ def _validate_arguments(arguments: argparse.Namespace) -> None:
         arguments.max_visits,
         arguments.engine_batch_size,
         arguments.shard_size,
+        arguments.num_workers,
     )
     if any(value <= 0 for value in numeric_values):
         raise ValueError("Extraction sizes and max-visits must be positive")
+    if not 0 <= arguments.worker_index < arguments.num_workers:
+        raise ValueError("worker-index must be between zero and num-workers - 1")
 
 
 def main() -> None:
@@ -407,13 +422,15 @@ def main() -> None:
         arguments.engine_batch_size,
         arguments.shard_size,
         tuple(arguments.human_profiles),
+        arguments.worker_index,
+        arguments.num_workers,
     )
     candidates, player_ids = _read_candidates(arguments.candidates)
     queries, question_ids, game_counts = _read_questions(
         arguments.questions,
     )
-    if len(player_ids) != 400:
-        raise ValueError(f"Expected 400 candidate players, got {len(player_ids)}")
+    if len(player_ids) < 5:
+        raise ValueError(f"Top-5 retrieval requires at least five players: {len(player_ids)}")
     arguments.output.mkdir(parents=True, exist_ok=True)
     _write_metadata(
         arguments.output,
