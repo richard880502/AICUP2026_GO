@@ -1,10 +1,30 @@
 # Open-set v2 player matching
 
-**In progress, 2026-11-11.** Phase-one controls have run; engine extraction and
-open-set rich-profile training are underway. No final-holdout result or new
-submission is claimed. Official Public remains **0.5236602**.
+**Completed, 2026-11-12.** All five directions, frozen inference replay,
+configuration sealing and the independent 600-player final evaluation are done.
 
-[Phase-one findings](PHASE1_RESULTS.md) · [Training and validation figure](figures/phase1_summary.svg)
+Final exponential Top-5: **0.295403** versus the fixed Fisher-profile baseline
+**0.057627**. Paired difference **+0.237775**, player-bootstrap 95% interval
+[+0.211479, +0.265015]. These are new-task proxy results; official Public
+remains **0.5236602**, with no new competition upload.
+
+[Complete results](RESULTS.md) · [Final figure](figures/completed_summary.svg) ·
+[Phase-one controls](PHASE1_RESULTS.md)
+
+## Replay or reproduce
+
+```bash
+bash competition1_player_identification/experiments/open_set_v2/reproduce.sh
+```
+
+With the existing sealed artifacts, this verifies model/data/code hashes and
+recomputes saved final metrics without retraining or selecting another model.
+On a fresh authorized-data workspace, it runs the full pipeline, including
+32-epoch 512D/1024D fits, three engine-assisted rank seeds, three pair-feature
+ablations, validation-only fusion, exact inference replay, sealing and final.
+Retraining is subject to floating-point variation; serialized replay is exact.
+The original `followup.py` was the eight-epoch first-pass watcher; use this
+reproduction script for the completed experiment's full training budget.
 
 ## Verified protocol
 
@@ -69,39 +89,37 @@ Global progress is the saved shard count; per-worker ETA is not a combined ETA.
 
 `followup.py --engine-pid <pid0> <pid1>` observes the exact live extractors,
 then checks completeness, builds rich profiles with eight CPU workers, runs a
-frozen Fisher baseline, fits 512D / 1024D encoders, and selects validation-only
-fusion. Incomplete terminated extraction is an error; the watcher never
+frozen Fisher baseline and fits first-pass eight-epoch encoders. The full
+completed pipeline is in `reproduce.sh`. Incomplete terminated extraction is an error; the watcher never
 silently restarts an extractor.
 
-## Experiment sequence and status
+## Completed experiment sequence
 
-1. **Protocol / controls: done.** Opening statistics, symmetry-invariant
-   opening-prefix matches and both-player move encoder controls have run.
-   Query-count, query-color and clustered-uncertainty reports are saved.
-   The rich-profile control waits for extraction.
-2. **Open-set rich-profile encoders: queued after extraction.** ArcFace plus
-   supervised contrastive and episodic few-reference/few-query loss. Every
-   normalization and classifier identity is training-only. Tiny training
-   libraries use fewer distinct references/queries; singleton identities
-   contribute ArcFace only. Evaluation always uses ten references.
-3. **Raw sequence / opening fusion: first pass done.** Three-layer 128D
-   move Transformer, attention pooling and normalized 256D game embeddings;
-   both absolute and target-relative color are encoded, with D8 augmentation.
-   Opening-prefix IDF matching covers lengths 4/8/16/32/64.
-4. **Game-to-game matching: fixed aggregators implemented.** Centroid,
-   all-pair mean, per-query top-three and log-mean-exp reference aggregation
-   are compared on exactly the same games. Learned pair scoring remains to
-   be implemented and evaluated after the rich-profile encoder is frozen.
-5. **Clean rank prior: first pass done.** Freshly train Competition 2's raw
-   four-layer 192D ordinal move architecture; 300 inner training players pick
-   checkpoint and temperature. No style-validation identities enter rank
-   training. This is the raw rank branch, **not full C1+C2**. Rank remains a
-   soft fusion feature, never a hard candidate filter.
+1. **Verified protocol and controls.** Opening statistics, exact D8 prefixes,
+   raw-move Transformer and frozen rich-profile Fisher control. Player/content
+   separation, color groups, query-count groups and bootstrap were checked.
+2. **Open-set rich-profile encoders.** Both dimensions trained for 32 epochs
+   of 256 episodes using training-only normalization, ArcFace, SupCon and
+   few-query/few-reference matching. Validation selected epochs 13 / 20;
+   final outcomes never selected checkpoints.
+3. **Move sequences and opening fusion.** Raw-move control and exact opening
+   matching were tested independently and as validation-selected fusion inputs.
+4. **Distribution and learned game matching.** Four fixed aggregators plus
+   frozen-encoder Top-20 hard-negative reranking. A/B game features each use
+   twenty columns, both use thirty-three. Validation selected the 1024D
+   matching family and a 0.75 reranker blend. Stage1 Recall@5/10/20/30/50,
+   natural misses and all three ablations are saved.
+5. **Clean C2 rank priors.** Raw-move ordinal control and a stronger,
+   three-seed C2 decision-Transformer architecture retrained on the new 64x41
+   cache. A 300-player inner training split selected/calibrated rank models.
+   This tests C2's rank-model branches, not the full C1+C2 ensemble. Priors
+   are soft; no candidates are discarded by a hard predicted-rank filter.
 
-After the engine and learned-matching ablations, lock a complete configuration
-and compare it with the fixed baseline on the final 600-player cohort once.
-That final evaluation, independent confirmation, complete findings and any
-new submission are **not yet done**. Validation-selected gains are exploratory.
+Serialized inference reproduced every selected validation source and baseline
+with zero numeric error and zero rank discrepancies. The complete recipe and
+artifact/code hashes were then sealed. Exactly that recipe scored 0.295403
+on the other 600 players, versus 0.289407 on selection validation. The final
+cohort is now reported and must not be reused as a fresh tuning target.
 
 ## Reproduce the early controls
 

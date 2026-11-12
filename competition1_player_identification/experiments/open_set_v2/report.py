@@ -14,6 +14,8 @@ import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 
+from competition1_player_identification.experiments.open_set_v2 import plots
+
 from competition1_player_identification.experiments.open_set_v2 import artifacts
 from competition1_player_identification.experiments.open_set_v2 import dataset
 from competition1_player_identification.experiments.open_set_v2 import (
@@ -88,16 +90,7 @@ def draw_figure(root: pathlib.Path, sources: dict, reports: dict) -> None:
         "Selected fusion",
     ):
         by_count = reports[name]["by_query_count"]
-        axes[1].plot(
-            evaluation.COUNTS,
-            [by_count[str(count)]["score"] for count in evaluation.COUNTS],
-            marker="o",
-            label=name,
-        )
-    axes[1].set_xticks(evaluation.COUNTS)
-    axes[1].set_xlabel("Query games")
-    axes[1].set_ylabel("Exponential Top-5 score")
-    axes[1].set_title("Nested queries; same 600 players")
+        plots.query_curve(axes[1], by_count, name)
     axes[1].legend(fontsize=8)
     for name, directory in (
         ("Opening", "encoder_opening"),

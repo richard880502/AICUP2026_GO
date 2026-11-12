@@ -14,30 +14,21 @@ import dataclasses
 
 import numpy as np
 import torch
-import torch.nn.functional
 
 from competition1_player_identification.experiments.open_set_v2 import artifacts
 from competition1_player_identification.experiments.open_set_v2 import dataset
 from competition1_player_identification.experiments.open_set_v2 import (
     evaluation,
 )
-from competition1_player_identification.experiments.open_set_v2 import training
+from competition1_player_identification.experiments.open_set_v2 import ordinal
 
 
-class C2MoveRanker(torch.nn.Module):
+class C2MoveRanker(ordinal.RankBase):
     """Uses the Competition 2 192D, four-layer ordinal move Transformer."""
 
     def __init__(self) -> None:
         super().__init__()
-        block = torch.nn.TransformerEncoderLayer(
-            192,
-            6,
-            dim_feedforward=768,
-            dropout=0.1,
-            activation="gelu",
-            batch_first=True,
-            norm_first=True,
-        )
+        block = ordinal.encoder_layer(192, 6, 768)
         self.layers = torch.nn.ModuleDict(
             {
                 "position": torch.nn.Embedding(362, 192),
@@ -54,13 +45,6 @@ class C2MoveRanker(torch.nn.Module):
                 "score": torch.nn.Linear(192, 1),
             }
         )
-        self.parameters_by_name = torch.nn.ParameterDict(
-            {
-                "gaps": torch.nn.Parameter(torch.zeros(8)),
-                "first": torch.nn.Parameter(torch.tensor(-2.0)),
-            }
-        )
-        self.softplus = torch.nn.Softplus()
 
     def forward(
         self,
@@ -78,36 +62,7 @@ class C2MoveRanker(torch.nn.Module):
             + self.layers["own"]((actor == colors[:, None]).long())
             + self.layers["step"](steps)[None]
         )
-        encoded = self.layers["norm"](
-            self.layers["encoder"](
-                encoded,
-                src_key_padding_mask=~valid,
-            )
-        )
-        weights = self.layers["pool"](encoded).squeeze(-1).float()
-        weights = weights.masked_fill(~valid, float("-inf")).softmax(1)
-        pooled = (weights[..., None] * encoded.float()).sum(1)
-        return self.rank_log_probabilities(pooled)
-
-    def rank_log_probabilities(self, pooled: torch.Tensor) -> torch.Tensor:
-        """Applies the original cumulative-link rank head to game vectors."""
-        gaps = self.softplus(self.parameters_by_name["gaps"] + 0.5)
-        thresholds = self.parameters_by_name["first"] + torch.cat(
-            (
-                torch.zeros(1, device=pooled.device),
-                gaps.cumsum(0),
-            )
-        )
-        cumulative = torch.sigmoid(
-            self.layers["score"](pooled).float() - thresholds
-        )
-        upper = torch.cat(
-            (torch.ones_like(cumulative[:, :1]), cumulative), dim=1
-        )
-        lower = torch.cat(
-            (cumulative, torch.zeros_like(cumulative[:, :1])), dim=1
-        )
-        return (upper - lower).clamp_min(1e-7).log()
+        return self.rank_log_probabilities(self.pool_game(encoded, valid))
 
 
 @dataclasses.dataclass
@@ -166,41 +121,27 @@ def predict(
     model.eval()
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
         for chosen in artifacts.batch_indices(indices):
-            outputs.append(
-                model(
-                    torch.from_numpy(data.tokens[chosen]).long().cuda(0),
-                    torch.from_numpy(data.colors[chosen]).cuda(0),
-                )
-                .float()
-                .exp()
-                .cpu()
-                .numpy()
+            logits = model(
+                torch.from_numpy(data.tokens[chosen]).long().cuda(0),
+                torch.from_numpy(data.colors[chosen]).cuda(0),
             )
+            outputs.append(ordinal.probability_array(logits))
     return np.concatenate(outputs)
 
 
 def train_epoch(context: tuple) -> float:
-    """Trains one shuffled pass using only non-inner training identities."""
+    """Fits the raw-move rank branch on its clean internal training rows."""
     model, optimizer, data, generator = context
-    model.train()
-    losses = []
-    for chosen in np.array_split(generator.permutation(data.train), 1024):
-        tokens = torch.from_numpy(data.tokens[chosen]).long().cuda(0)
-        tokens = training.augment_moves(tokens, generator)
-        optimizer.zero_grad(set_to_none=True)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
-            logits = model(
-                tokens, torch.from_numpy(data.colors[chosen]).cuda(0)
-            )
-            loss = torch.nn.functional.nll_loss(
-                logits,
-                torch.from_numpy(data.labels[chosen]).cuda(0),
-            )
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
-        optimizer.step()
-        losses.append(float(loss.detach()))
-    return float(np.mean(losses))
+    return ordinal.train_epoch(
+        (
+            model,
+            optimizer,
+            (data.tokens, data.colors, data.labels, data.train),
+            generator,
+            True,
+            1024,
+        )
+    )
 
 
 def calibrate(
@@ -259,12 +200,9 @@ def run() -> None:
             "temperature": temperature,
         }
         history.append(row)
-        if nll < best:
-            best = nll
-            torch.save(
-                {"state": model.state_dict(), "selection": row},
-                root / "checkpoint.pt",
-            )
+        best = ordinal.save_selected(
+            (model, root / "checkpoint.pt", nll, best, row)
+        )
         print(row, flush=True)
         artifacts.write_report(root / "history.json", {"epochs": history})
     checkpoint = torch.load(
@@ -288,17 +226,7 @@ def run() -> None:
         10,
     )
     np.save(root / "validation_probabilities.npy", probabilities)
-    scores = np.stack(
-        [
-            np.log(
-                (
-                    probabilities[:, 10 : 10 + count].mean(1)
-                    @ probabilities[:, :10].mean(1).T
-                ).clip(min=1e-7)
-            )
-            for count in evaluation.COUNTS
-        ]
-    )
+    scores = evaluation.rank_affinity(probabilities)
     np.save(root / "validation_scores.npy", scores)
     artifacts.write_report(
         root / "completed.json",

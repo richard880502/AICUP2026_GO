@@ -49,7 +49,18 @@ def load_sources(root: pathlib.Path) -> tuple[dict, dict]:
     paths = {
         "prefix": root / "prefix_validation_scores.npy",
         "rank_prior": root / "rank_prior/validation_scores.npy",
+        "rank_engine": root / "rank_engine/validation_scores.npy",
     }
+    matching_report = root / "matching/completed.json"
+    if matching_report.exists():
+        matching = json.loads(matching_report.read_text())
+        paths["engine_ensemble"] = (
+            root / "matching/stage1_validation_scores.npy"
+        )
+        if matching["reranker_adopted"]:
+            paths["learned_pair"] = (
+                root / "matching/reranked_validation_scores.npy"
+            )
     for kind in ("opening", "sequence", "engine_512", "engine_1024"):
         directory = root / f"encoder_{kind}"
         if (directory / "completed.json").exists():

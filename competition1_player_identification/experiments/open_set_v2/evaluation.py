@@ -18,6 +18,25 @@ COUNTS = (
 )
 
 
+def rank_affinity(probabilities: np.ndarray) -> np.ndarray:
+    """Scores calibrated rank bags without hard candidate pruning."""
+    if probabilities.ndim != 3 or probabilities.shape[1] != 15:
+        raise ValueError(
+            "Expected ten reference and five available query ranks"
+        )
+    references = probabilities[:, :10].mean(1)
+    return np.stack(
+        [
+            np.log(
+                (probabilities[:, 10 : 10 + count].mean(1) @ references.T).clip(
+                    min=1e-7
+                )
+            )
+            for count in COUNTS
+        ]
+    )
+
+
 def save_scores(path: pathlib.Path, scores: dict) -> None:
     """Stores fixed-aggregator matrices without changing their query order."""
     with path.open("wb") as output:

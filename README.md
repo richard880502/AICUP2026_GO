@@ -4,13 +4,13 @@ This monorepo keeps the two AI CUP Go tasks explicitly separated. They use
 different labels, evaluation metrics, model heads, and inference protocols;
 their scores must not be compared as if they were the same task.
 
-| Directory | Task | Current best internal result |
+| Directory | Task | Internal benchmarks |
 | --- | --- | ---: |
-| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | **0.923040** on the historical 400-way proxy |
+| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way locked final: **0.295403** |
 | [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
 
-Both numbers are offline player-disjoint proxy/holdout results, not official
-leaderboard submissions.
+These are offline proxy/holdout results under different protocols, not
+official leaderboard submissions.
 
 Competition 1's v2 **Public best is 0.5236602**, reported by the user on
 2026-11-11. Frozen original-pool encoders improved on the candidate-retrained
@@ -34,6 +34,13 @@ The research
 pipeline extracts KataGo/HumanSL decision profiles, ownership-spatial features,
 and ArcFace game embeddings, then performs cosine retrieval followed by a
 group-softmax Top-20 reranker.
+The [completed new-task experiment](competition1_player_identification/experiments/open_set_v2/RESULTS.md)
+trained open-set encoders on 6,807 training players and evaluated on a separate
+600-player final pool: **0.295403**, versus the fixed Fisher-profile baseline
+**0.057627**. It uses ten references and 1/2/3/5-game queries, with learned
+local game matching, opening cues and a clean C2-derived rank prior. It has
+not replaced the official Public-best submission.
+
 For the v2 submission, original-pool encoders and normalization are frozen
 when embedding the new candidate/query pools; neural weights are not refit
 on their ten-game libraries.

@@ -5,10 +5,20 @@ Use write_report(path, values, emit=True) for a local JSON report plus stdout.
 
 import argparse
 import collections.abc
+import hashlib
 import json
 import pathlib
 
 import numpy as np
+
+
+def file_digest(path: pathlib.Path) -> str:
+    """Hashes large local artifacts without loading them into memory at once."""
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while block := source.read(1024 * 1024):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def root_parser(

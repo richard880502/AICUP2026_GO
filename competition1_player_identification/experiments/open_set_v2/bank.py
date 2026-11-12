@@ -19,10 +19,30 @@ from competition1_player_identification.experiments.open_set_v2 import train
 from competition1_player_identification.experiments.open_set_v2 import training
 
 
-def encode_checkpoint(path: pathlib.Path) -> np.ndarray:
+def frozen_runtime(
+    checkpoint: dict,
+    data: training.GameData,
+    device: str,
+) -> training.Runtime:
+    """Creates a read-only inference context with no optimizer updates."""
+    specification = models.Specification(**checkpoint["specification"])
+    model = models.Encoder(specification).to(device)
+    model.load_state_dict(checkpoint["state"])
+    return training.Runtime(
+        model,
+        torch.optim.SGD(model.parameters(), lr=0),
+        data,
+        device,
+        np.random.default_rng(20261111),
+        specification.kind,
+    )
+
+
+def encode_checkpoint(path: pathlib.Path, device: str = "cuda:0") -> np.ndarray:
     """Returns unit game embeddings from a fixed, digest-verified checkpoint."""
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    destination = path.parent / f"bank_{digest[:12]}.npy"
+    precision = "bf16" if device.startswith("cuda") else "fp32"
+    destination = path.parent / f"bank_{digest[:12]}_{precision}.npy"
     if destination.exists():
         return np.load(destination, mmap_mode="r")
     checkpoint = torch.load(
@@ -45,16 +65,7 @@ def encode_checkpoint(path: pathlib.Path) -> np.ndarray:
         raise ValueError(
             "Training normalization no longer matches frozen stage one"
         )
-    model = models.Encoder(specification).cuda(0)
-    model.load_state_dict(checkpoint["state"])
-    runtime = training.Runtime(
-        model,
-        torch.optim.SGD(model.parameters(), lr=0),
-        data,
-        "cuda:0",
-        np.random.default_rng(20261111),
-        specification.kind,
-    )
+    runtime = frozen_runtime(checkpoint, data, device)
     embeddings = training.encode(runtime, np.arange(len(data.values)))
     if not np.isfinite(embeddings).all():
         raise ValueError("Nonfinite frozen game embeddings")
@@ -69,6 +80,7 @@ def encode_checkpoint(path: pathlib.Path) -> np.ndarray:
             "games": len(embeddings),
             "dimension": specification.dimension,
             "frozen": True,
+            "precision": precision,
         },
     )
     return embeddings

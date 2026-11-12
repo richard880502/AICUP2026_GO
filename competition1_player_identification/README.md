@@ -27,10 +27,10 @@ See [the official record](docs/public_v2_20261111.md) and
 ## Current best offline result
 
 The [new mixed-color 600-way experiment](experiments/open_set_v2/README.md)
-is in progress. Its [phase-one record](experiments/open_set_v2/PHASE1_RESULTS.md)
-reports validation-only controls and a 0.124733 exploratory fusion before
-engine-profile training. A separate 600-player final cohort remains unopened;
-these numbers are not the official Public score or the historical proxy below.
+is complete. Its locked, player-disjoint final score is **0.295403**, versus
+**0.057627** for the fixed Fisher-profile baseline, on ten references and
+1/2/3/5-game queries. These are different-protocol research scores, not Public
+or the historical proxy below. See [complete results and figures](experiments/open_set_v2/RESULTS.md).
 
 **0.923040** mean exponential Top-5 score on the independent 400-way proxy.
 This is an offline research result, not a competition leaderboard score. It

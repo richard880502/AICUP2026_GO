@@ -38,6 +38,13 @@ def main() -> None:
     weights = opening.fisher_weights(
         normalized, raw["players"][selected[training]]
     )
+    with (root / "fisher_parameters.npz").open("wb") as output:
+        np.savez_compressed(
+            output,
+            mean=mean,
+            scale=scale,
+            weights=weights,
+        )
     values = (
         np.clip(
             (profiles[validation] - mean) / scale,
