@@ -275,3 +275,31 @@ Official gain on the new Public pool over the v4 cosine: +0.042 against
 +0.063 offline. Files: `submission_style_v4_rerank` (sha256 `6d8dd6c2...`)
 and `submission_style_v5_match` (sha256 `9cc83716...`) under
 `production/trunk_style_20261113/`.
+
+## How to reproduce
+
+All commands run from the repository root with
+`PYTHONPATH=.:competition1_player_identification CUDA_VISIBLE_DEVICES=1`
+and `M=competition1_player_identification.experiments.trunk_style`.
+Intermediate files are written to `production/trunk_style_20261113/rerank/`.
+Seeds and inputs are fixed: steps 4 and 9 reproduce the two submission
+files above byte for byte from the saved checkpoints.
+
+1. Cross-fitted encoders:
+   `python -m $M.train --name style_v4_fold{0,1} --all-moves --extra --engine-dropout 0.3 --epochs 30 --fold {0,1}`
+2. Embedding dumps: `python -m $M.rerank_inputs cohorts`, then `crossfit`,
+   then `pools`.
+3. Reranker, three seeds:
+   `python -m $M.rerank --seed 0 --steps 6000 --name listwise_s0`,
+   `--seed 1 --name listwise_s1`, `--seed 2 --name listwise_s2` (4,000 steps).
+4. Repeated-target check and `submission_style_v4_rerank`:
+   `python -m $M.rerank_apply listwise_s0 listwise_s1 listwise_s2`
+5. Label-free checks (optional): `python -m $M.score_corrections structure`
+   and `repeats`.
+6. Untrained move matching on both cohorts: `python -m $M.matching_apply probe`
+7. Matching head: `python -m $M.matching --epochs 8 --name style_v5_match`
+8. Fusion weights on validation: `python -m $M.matching_apply validation`
+9. `submission_style_v5_match`: `python -m $M.matching_apply pools`
+
+`rerank_apply` and `matching_apply pools` take `--output` to write the
+submission elsewhere.
