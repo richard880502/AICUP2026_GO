@@ -6,13 +6,13 @@ their scores must not be compared as if they were the same task.
 
 | Directory | Task | Internal benchmarks |
 | --- | --- | ---: |
-| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way final cohort: **0.7270** (open-set v2: 0.295403) |
+| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way final cohort: **0.7587** (open-set v2: 0.295403) |
 | [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
 
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.8345466** (2026-11-13, per-move HumanSL
+Competition 1's v2 **Public best is 0.8592604** (2026-11-14, per-move HumanSL
 trunk style encoder reading every own move; see
 [the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
 Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
@@ -32,7 +32,7 @@ submission record is in
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
-## Current best architecture: player identification (Public 0.8345466)
+## Current best architecture: player identification (Public 0.8592604)
 
 The submission answers the two kinds of pools with different pipelines,
 because the reference library per candidate differs tenfold (100 games
@@ -70,13 +70,13 @@ Training of the style encoder (no official test player is used):
 
 ```mermaid
 flowchart LR
-    TRAIN["Training set<br/>6,807 players, up to 16 games each"] --> BATCH["Batch: 128 players x 4 games<br/>15% decision dropout"]
+    TRAIN["Training set<br/>6,807 players, up to 48 games each"] --> BATCH["Batch: 128 players x 4 games<br/>15% decision dropout"]
     BATCH --> ENC["Style encoder"]
     ENC --> ARC["ArcFace loss<br/>player classification"]
     ENC --> CON["Supervised contrastive loss<br/>same player close, others apart"]
     VAL["600 held-out players<br/>validation cohort"] --> SELECT["Epoch selection"]
     ENC --> SELECT
-    FINAL["600 further held-out players<br/>final cohort"] --> REPORT["0.7270 versus 0.2954<br/>for the open-set v2 method"]
+    FINAL["600 further held-out players<br/>final cohort"] --> REPORT["0.7587 versus 0.2954<br/>for the open-set v2 method"]
     SELECT --> REPORT
 ```
 

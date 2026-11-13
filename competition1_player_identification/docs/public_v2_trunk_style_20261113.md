@@ -187,5 +187,36 @@ Fusing with the open-set score no longer helps (final 0.7239, validation
 `apply.py` now uses the style score alone when validation favours it.
 
 The official gain on the new Public pool (+0.052) matches the offline final
-gain (+0.045). A full run with the 139k extra training games in the same
-layout was still extracting when this was written.
+gain (+0.045).
+
+## Full all-moves encoder (v4): Public 0.8592604
+
+Reported by the user on 2026-11-14. Same layout as v4a, trained on both
+corpora (248k games, up to 48 per player), engine dropout 0.3, 30 epochs,
+best validation at epoch 18. Original pools are unchanged (copied from the
+v2 submission). File sha256 `e13d37a9...`, artifacts in
+`production/trunk_style_20261113/submission_style_v4/`.
+
+| | v4a: all moves, 109k games | v4: all moves, 248k games |
+| --- | ---: | ---: |
+| Validation | 0.7122 | 0.7626 |
+| Final cohort, alone | 0.7270 | 0.7587 [0.737, 0.781] |
+| Public | 0.8345466 | 0.8592604 |
+
+Fusion with the open-set score is below the style score alone on
+validation (0.7540 versus 0.7626), so the style score is used alone.
+
+Final cohort by query games, with how often the true player is ranked
+first, in the top 5 and in the top 20:
+
+| Query games | Score | Top 1 | Top 5 | Top 20 |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 0.530 | 0.470 | 0.732 | 0.887 |
+| 2 | 0.750 | 0.708 | 0.900 | 0.970 |
+| 3 | 0.833 | 0.793 | 0.947 | 0.988 |
+| 5 | 0.921 | 0.897 | 0.987 | 0.998 |
+
+With one or two query games the true player is usually inside the top 20
+but not first, which is the room a second-stage reranker could use. The
+official gain on the new Public pool (+0.049) again exceeds the offline
+final gain (+0.032).
