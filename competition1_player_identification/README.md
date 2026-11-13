@@ -6,6 +6,12 @@ locally and intentionally excluded from Git.
 
 ## Current official v2 Public result
 
+**0.5640548**, reported by the user on 2026-11-13: pool-trained and open-set
+methods fused on all four pools (`production_pipeline/fusion_official.py`).
+The open-set-only version scored 0.5525235. See
+[the record](docs/public_v2_openset_20261113.md). The paragraphs below
+describe the previous best.
+
 **0.5236602**, reported by the user on 2026-11-11. The frozen-encoder
 submission improves on the candidate-retrained version's **0.4650701** by
 **+0.0585901**. Private performance is unknown. These official mixed-pool

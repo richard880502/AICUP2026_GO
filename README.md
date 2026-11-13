@@ -12,7 +12,10 @@ their scores must not be compared as if they were the same task.
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.5236602**, reported by the user on
+Competition 1's v2 **Public best is 0.5640548** (2026-11-13, pool-trained and
+open-set methods fused on all four pools; see
+[the record](competition1_player_identification/docs/public_v2_openset_20261113.md)).
+The previous v2 Public best was 0.5236602, reported by the user on
 2026-11-11. Frozen original-pool encoders improved on the candidate-retrained
 submission's 0.4650701 (+0.0585901). The v2 score averages original and new
 Public questions and is not comparable to the historical 0.923040 proxy.
