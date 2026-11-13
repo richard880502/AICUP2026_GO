@@ -21,12 +21,17 @@ from competition1_player_identification.experiments.open_set_v2 import (
 from competition1_player_identification.experiments.open_set_v2 import fusion
 from competition1_player_identification.experiments.open_set_v2 import infer
 from competition1_player_identification.experiments.trunk_style import train
+from competition1_player_identification.production_pipeline import data
+from competition1_player_identification.production_pipeline import metric
 from competition1_player_identification.production_pipeline import (
     open_set_official as official,
 )
+from competition1_player_identification.production_pipeline import ranking
 from competition1_player_identification.production_pipeline import run
 
 ROOT = train.ROOT
+INPUT = pathlib.Path("production/player_v2_20261111")
+WEIGHTS = (0.0, 1.0, 2.0, 4.0, 6.0, 8.0, 12.0, 24.0)
 OPEN = train.OPEN
 DATA = pathlib.Path(
     "data/aicup2026_player_identification_v2_tests_20261108_fix_readme"
@@ -49,9 +54,9 @@ def load_model(name: str) -> tuple:
     return model, scaling, float(weight), checkpoint
 
 
-def cohort_scores(model, scaling, data: dict, positions: np.ndarray):
+def cohort_scores(model, scaling, games: dict, positions: np.ndarray):
     """Returns centroid scores [4, 600, 600] for a padded cohort layout."""
-    embeddings = train.encode(model, data, scaling, positions.ravel())
+    embeddings = train.encode(model, games, scaling, positions.ravel())
     return evaluation.similarity_scores(
         np.reshape(embeddings, (600, 15, -1)), "cuda:0"
     )["centroid"]
@@ -59,9 +64,9 @@ def cohort_scores(model, scaling, data: dict, positions: np.ndarray):
 
 def final_report(model, scaling, weight: float) -> dict:
     """Reads the untouched final cohort once with the frozen recipe."""
-    data = train.load_corpus(0)
+    corpus = train.load_corpus(0)
     _, local = infer.positions(OPEN, "final_holdout")
-    scores = cohort_scores(model, scaling, data, local)
+    scores = cohort_scores(model, scaling, corpus, local)
     base = fusion.standardize(np.load(OPEN / "final_scores.npz")["proposed"])
     mixed = base + weight * fusion.standardize(scores)
     return {
@@ -94,13 +99,13 @@ def pool(  # pylint: disable=too-many-locals
     agreement = float((masks == games["masks"]).all(1).mean())
     if agreement < 0.999:
         raise ValueError(f"Decision masks disagree: {agreement}")
-    data = {
+    tokens = {
         "trunk": trunk,
         "engine": games["decisions"].astype(np.float16),
         "masks": masks & games["masks"],
         "colors": games["colors"].astype(np.int64),
     }
-    scores = cohort_scores(model, scaling, data, positions)
+    scores = cohort_scores(model, scaling, tokens, positions)
     slots = [evaluation.COUNTS.index(int(count)) for count in names["counts"]]
     rows = np.arange(len(slots))
     style = fusion.standardize(scores[slots, rows])
@@ -139,6 +144,143 @@ def pool(  # pylint: disable=too-many-locals
     }
 
 
+def style_games(name: str, group: str, model, scaling) -> np.ndarray:
+    """Encodes one original-pool game list (black only) in its file order."""
+    features = official.load_shards(
+        INPUT / name / "features" / group, ("tokens", "masks", "record_ids")
+    )
+    directory = ROOT / f"{name}_{group}"
+    if not np.array_equal(
+        train.load_shards(directory, "record_ids", 0), features["record_ids"]
+    ):
+        raise ValueError("Trunk and engine caches list different games")
+    masks = train.load_shards(directory, "masks", 0)
+    if float((masks == features["masks"]).all(1).mean()) < 0.999:
+        raise ValueError("Decision masks disagree")
+    games = {
+        "trunk": train.load_shards(directory, "tokens", 0),
+        "engine": features["tokens"].astype(np.float16),
+        "masks": masks & features["masks"],
+        "colors": np.zeros(len(masks), np.int64),
+    }
+    return train.encode(model, games, scaling, np.arange(len(masks)))
+
+
+def held_out_table(  # pylint: disable=too-many-locals
+    context: ranking.Context, style: np.ndarray
+) -> dict:
+    """Scores pool-trained, style and mixed Stage-1 on held-out candidate games."""
+    positions = context.metric_context
+    owners = np.arange(len(style))[:, None]
+    references = [
+        ranking.take_positions(branch.development, positions.reference_positions)
+        for branch in (context.first, context.second)
+    ]
+    held = [
+        ranking.take_positions(branch.development, positions.holdout_positions)
+        for branch in (context.first, context.second)
+    ]
+    style_reference = ranking.normalize(
+        style[owners, positions.reference_positions].mean(1)
+    )
+    style_held = style[owners, positions.holdout_positions]
+    generator = np.random.default_rng(20261113)
+    table = {}
+    for count in positions.counts:
+        totals = np.zeros(len(WEIGHTS) + 1)
+        for _ in range(8):
+            columns = generator.permutation(style_held.shape[1])[:count]
+            parts = [
+                ranking.score_matrix(reference, values[:, :, columns])
+                for reference, values in zip(references, held)
+            ]
+            blend = context.weights[count]
+            closed = ranking.row_standardize(
+                (1 - blend) * parts[0] + blend * parts[1]
+            )
+            opened = ranking.row_standardize(
+                ranking.normalize(style_held[:, columns].mean(1))
+                @ style_reference.T
+            )
+            totals[:-1] += [
+                ranking.utility(closed + weight * opened) for weight in WEIGHTS
+            ]
+            totals[-1] += ranking.utility(opened)
+        table[int(count)] = (totals / 8).tolist()
+    return table
+
+
+def original_pool(  # pylint: disable=too-many-locals
+    name: str, model, scaling, base: pathlib.Path, output: pathlib.Path
+) -> dict:
+    """Adds the style score to the pool-trained Stage-1 over the full pool.
+
+    One weight is chosen for all query sizes on held-out candidate games.
+    The Top-20 reranker is not applied: it was fitted to the pool-trained
+    ordering, which the style score now dominates.
+    """
+    source = INPUT / name / "models"
+    pool_data = data.load_pool(INPUT / name, 2)
+    metric_context = metric.make_context(pool_data, source, torch.device("cuda:0"))
+    context = ranking.Context(
+        metric_context,
+        metric.fit_branch(metric_context, 512),
+        metric.fit_branch(metric_context, 1024),
+        {},
+    )
+    context.weights = ranking.select_weights(context)
+    features = official.load_shards(
+        INPUT / name / "features/candidates", ("group_indices",)
+    )
+    games = style_games(name, "candidates", model, scaling)
+    players = len(pool_data.candidates.players)
+    style = np.stack(
+        [games[features["group_indices"] == index] for index in range(players)]
+    )
+    table = held_out_table(context, style)
+    means = np.mean(list(table.values()), axis=0)
+    weight = WEIGHTS[int(np.argmax(means[:-1]))]
+    questions = len(pool_data.queries.counts)
+    query_games = ranking.normalize(style_games(name, "queries", model, scaling))
+    query = np.stack(
+        [
+            query_games[pool_data.queries.groups == index].mean(0)
+            for index in range(questions)
+        ]
+    )
+    opened = ranking.row_standardize(
+        ranking.normalize(query) @ ranking.normalize(style.mean(1)).T
+    )
+    pairs = ranking.make_dataset(context, np.arange(questions), False)
+    closed = ranking.row_standardize(np.stack(pairs.stage1_scores))
+    order = np.argsort(-(closed + weight * opened), axis=1, kind="stable")[:, :5]
+    previous = {
+        row["question_id"]: row["top_1"]
+        for row in run.read_csv(base / name / "predictions.csv")
+    }
+    rows, same = [], 0
+    for identifier, chosen in zip(pool_data.queries.identifiers, order):
+        row = {"question_id": str(identifier)}
+        for place, player in enumerate(chosen, start=1):
+            row[f"top_{place}"] = str(pool_data.candidates.players[player])
+        same += int(previous[row["question_id"]] == row["top_1"])
+        rows.append(row)
+    (output / name).mkdir(parents=True, exist_ok=True)
+    run.write_csv(output / name / "predictions.csv", rows)
+    return {
+        "held_out_candidate_scores": {
+            "weights": list(WEIGHTS) + ["style_only"],
+            "by_query_games": table,
+            "mean": means.tolist(),
+        },
+        "selected_weight": weight,
+        "top1_same_as_previous_submission": f"{same}/{questions}",
+        "style_only_top1_same_as_fused": float(
+            (np.argmax(opened, 1) == order[:, 0]).mean()
+        ),
+    }
+
+
 def main() -> None:
     """Runs the final-cohort check, both new pools and the assembly."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -163,10 +305,10 @@ def main() -> None:
         report[name] = pool(name, model, scaling, weight, output)
         print(name, json.dumps(report[name]), flush=True)
     for name in ("pub", "priv"):
-        (output / name).mkdir(exist_ok=True)
-        (output / name / "predictions.csv").write_bytes(
-            (arguments.base / name / "predictions.csv").read_bytes()
+        report[name] = original_pool(
+            name, model, scaling, arguments.base, output
         )
+        print(name, json.dumps(report[name], indent=1), flush=True)
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     run.aggregate(argparse.Namespace(output=output, data_dir=DATA))
 

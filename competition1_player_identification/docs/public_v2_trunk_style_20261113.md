@@ -74,3 +74,59 @@ about 0.605, so the 41 scalars add roughly 0.02 on top of the trunk tokens.
 Artifacts: `production/trunk_style_20261113/` (`style_v1/checkpoint.pt`,
 `submission_style_v1/`). Upload SHA-256
 `e5af2704ec3c446c46bc1ab47db6ec4ee193e8f57487f0bf783e84940b22edbf`.
+
+## Follow-up the same day: more training games, all four pools, Public 0.8084515
+
+| Submission | Official Public |
+| --- | ---: |
+| Style encoder v1 on new pools (above) | 0.7187986 |
+| **Style encoder v2 on all four pools** | **0.8084515** |
+
+Gain **+0.0896529** Public, reported by the user on 2026-11-13. Upload
+SHA-256 `aea54a41b6e0f3f55788bf09c9647d4b6ba356f2de879a8d89d0723591230052`,
+artifacts in `production/trunk_style_20261113/submission_style_v2/`.
+
+### Encoder v2 (`train.py --extra --engine-dropout 0.3 --epochs 30`)
+
+`inputs.py` adds up to 32 further games per training player (138,684 games;
+many players have fewer than 48 games in total), so training grows from
+about 109k to 248k games of the same 6,807 players. Only trunk tokens were
+extracted for the added games. Their 41 engine channels are zero, and the
+engine channels of the other games are dropped with probability 0.3 during
+training so the encoder works with or without them. Engine scalars are
+still used at inference, where every game has them.
+
+| | v1 | v2 |
+| --- | ---: | ---: |
+| Validation (epoch selection) | 0.6235 | 0.6683 |
+| Final cohort, alone | 0.6234 | 0.6818 [0.658, 0.707] |
+| Final cohort, fused with open-set (weight 3) | 0.6244 | 0.6877 |
+
+Final cohort by query games (v2 alone): 1: 0.452, 2: 0.659, 3: 0.745,
+5: 0.870. Adding games without engine scalars improved the encoder, so
+re-running KataGo for them was not needed.
+
+### Original pools (`apply.py`, `original_pool`)
+
+The same encoder, which never saw any pool player, is applied to the
+100-game libraries. Its centroid cosine is added to the pool-trained
+Stage-1 score over the full pool; one weight for all query sizes is chosen
+on candidate-held-out games (20 per player, 8 draws per size). The Top-20
+group-softmax reranker is no longer applied, because it was fitted to the
+pool-trained ordering.
+
+| Held-out candidate games, mean over 5/10/15/20 | Public pool | Private pool |
+| --- | ---: | ---: |
+| Pool-trained Stage 1 | 0.9259 | 0.9107 |
+| With style encoder (selected weight 24) | 0.9939 | 0.9932 |
+| Style encoder alone | 0.9935 | 0.9931 |
+
+Official questions whose Top-1 changed: 76/400 (public), 32/400 (private).
+
+### Reading the official score
+
+The original/new split of Public is still not observable. The two halves
+now sum to 1.617; if the original pools score near the held-out estimate
+(0.97-0.99), the new Public pool is about 0.63-0.65, slightly below the
+offline 0.69. Remaining headroom is therefore almost entirely in the new
+pools.
