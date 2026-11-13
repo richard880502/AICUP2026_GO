@@ -6,9 +6,10 @@ locally and intentionally excluded from Git.
 
 ## Current official v2 Public result
 
-**0.5640548**, reported by the user on 2026-11-13: pool-trained and open-set
-methods fused on all four pools (`production_pipeline/fusion_official.py`).
-The open-set-only version scored 0.5525235. See
+**0.7187986**, reported by the user on 2026-11-13: a per-move style encoder on
+frozen HumanSL trunk activations answers the new pools
+([record](docs/public_v2_trunk_style_20261113.md), `experiments/trunk_style/`).
+Earlier the same day: 0.5640548 (two-way fusion) and 0.5525235 (open-set only). See
 [the record](docs/public_v2_openset_20261113.md). The paragraphs below
 describe the previous best.
 
