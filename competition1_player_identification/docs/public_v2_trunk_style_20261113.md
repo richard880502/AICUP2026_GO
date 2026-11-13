@@ -220,3 +220,58 @@ With one or two query games the true player is usually inside the top 20
 but not first, which is the room a second-stage reranker could use. The
 official gain on the new Public pool (+0.049) again exceeds the offline
 final gain (+0.032).
+
+## Second stage on the new pools: Public 0.8637413, then 0.8801077
+
+Both reported by the user on 2026-11-14. Original pools are unchanged in
+both files. Offline numbers below use a protocol shaped like an official
+new pool: 600 candidates, 400 questions with distinct targets, 100 each
+with 1/2/3/5 query games, 20 random draws from the cohort.
+
+| New-pool method | Validation | Final cohort | Public |
+| --- | ---: | ---: | ---: |
+| v4 game-vector cosine | 0.762 | 0.760 | 0.8592604 |
+| + CSLS (5 neighbours, row-standardized) | 0.779 | 0.776 | not uploaded |
+| Listwise reranker on game vectors (3 seeds) | 0.790 | 0.795 | 0.8637413 |
+| Cosine + move matching | 0.791 | 0.807 | not uploaded |
+| **Cosine + move matching + CSLS** | **0.811** | **0.823** | **0.8801077** |
+| Reranker logits + move matching | 0.806 | 0.820 | not uploaded |
+
+Structure check without labels: among the confident half of the official
+questions 5-6% share a top-1 candidate, against 1% when cohort targets are
+distinct and 20% when drawn with replacement, so targets are close to
+distinct. A balanced (Sinkhorn) correction gains +0.03 with distinct
+targets but loses 0.03 with replacement and was not used; CSLS and the
+reranker stay positive with 80 of 400 targets repeated.
+
+Listwise reranker: CSLS proposes 20 candidates; a 2-layer Transformer
+compares the query game vectors with each candidate's 10 reference
+vectors, a second 2-layer Transformer compares the 20 candidates, trained
+with cross-entropy on 600-player episodes. Training players are embedded
+by cross-fitted encoders (two halves, validation 0.697 and 0.701) so every
+episode player is unseen by its encoder. It saturates after about 1,000
+steps; its official gain (+0.0045) was a quarter of the offline one.
+
+Move matching (late interaction): every own move of a query game takes
+its highest cosine against all moves of a candidate's 10 reference games;
+the maxima are averaged over moves, then over query games. Two move
+representations are used: the v4 encoder's 256-D contextual hidden states
+without any further training, and a 64-D head fine-tuned for 8 epochs
+with a matching loss (one game against three games of each of 64
+players) next to the original losses. Row-standardized sum, weights
+1 : 0.5 : 0.5 chosen on validation, then CSLS.
+
+| Matching source | Alone (validation) | Correlation with cosine on pub2 | Cosine + 0.5 x source (validation / final) |
+| --- | ---: | ---: | --- |
+| Hidden states, untrained | 0.674 | 0.69 | 0.788 / 0.799 |
+| Fine-tuned head | 0.741 | 0.89 | 0.775 / 0.780 |
+
+The fine-tuned head is better alone but nearly redundant with the game
+vector; the untrained hidden states are weaker alone and add more. By
+query games on the final cohort (cosine, then cosine + both matchings):
+1: 0.530 -> 0.600, 2: 0.750 -> 0.803, 3: 0.833 -> 0.871, 5: 0.921 -> 0.950.
+
+Official gain on the new Public pool over the v4 cosine: +0.042 against
++0.063 offline. Files: `submission_style_v4_rerank` (sha256 `6d8dd6c2...`)
+and `submission_style_v5_match` (sha256 `9cc83716...`) under
+`production/trunk_style_20261113/`.

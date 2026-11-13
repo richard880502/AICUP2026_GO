@@ -12,8 +12,8 @@ their scores must not be compared as if they were the same task.
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.8592604** (2026-11-14, per-move HumanSL
-trunk style encoder reading every own move; see
+Competition 1's v2 **Public best is 0.8801077** (2026-11-14, per-move HumanSL
+trunk style encoder plus move-to-move matching on the new pools; see
 [the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
 Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
 methods on all four pools (see
@@ -32,7 +32,7 @@ submission record is in
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
-## Current best architecture: player identification (Public 0.8592604)
+## Current best architecture: player identification (Public 0.8801077)
 
 The submission answers the two kinds of pools with different pipelines,
 because the reference library per candidate differs tenfold (100 games
@@ -61,9 +61,13 @@ flowchart TD
     REF --> COSINE["Cosine similarity<br/>question x 600 candidates"]
     QUERY --> COSINE
 
-    OPENSET["Open-set v2 score<br/>profile encoders, pair reranker,<br/>rank prior, opening and prefix match"] --> FUSE
-    COSINE --> FUSE["Row-standardized fusion<br/>style weight 3 : open-set 1"]
-    FUSE --> TOP5["Top-5 candidates"]
+    ENCODER --> MOVES["Per-move vectors<br/>encoder hidden states 256-D<br/>and a fine-tuned 64-D head"]
+    MOVES --> MATCH["Move-to-move matching<br/>each query move finds its most similar move<br/>among the candidate's 10 games, then average"]
+
+    COSINE --> FUSE["Row-standardized sum<br/>cosine 1 : hidden-state matching 0.5 : tuned matching 0.5"]
+    MATCH --> FUSE
+    FUSE --> CSLS["CSLS correction<br/>discount candidates that resemble every question"]
+    CSLS --> TOP5["Top-5 candidates"]
 ```
 
 Training of the style encoder (no official test player is used):

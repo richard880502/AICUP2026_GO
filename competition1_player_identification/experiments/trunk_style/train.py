@@ -471,6 +471,12 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
         action="store_true",
         help="Ablation: zero the 41 engine scalars, keep trunk tokens only.",
     )
+    parser.add_argument(
+        "--fold",
+        type=int,
+        default=-1,
+        help="Cross-fitting: leave out training players with index % 2 == fold.",
+    )
     arguments = parser.parse_args()
     torch.manual_seed(20261113)
     if arguments.all_moves:
@@ -480,6 +486,13 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
     data = load_corpus(
         arguments.limit_shards, arguments.extra, 92000 if arguments.pools else 0
     )
+    if arguments.fold >= 0:
+        data["groups"] = [
+            group
+            for index, group in enumerate(data["groups"])
+            if index % 2 != arguments.fold
+        ]
+        data["train_rows"] = np.concatenate(data["groups"])
     scaling_arrays = fit_scaling(data)
     if arguments.pools:
         add_pools(data)
