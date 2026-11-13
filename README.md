@@ -32,6 +32,69 @@ submission record is in
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
+## Current best architecture: player identification (Public 0.7187986)
+
+The submission answers the two kinds of pools with different pipelines,
+because the reference library per candidate differs tenfold (100 games
+versus 10). Details and offline numbers:
+[trunk style encoder record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md).
+
+### New pools (600 candidates x 10 games, 1-5 query games, mixed colors)
+
+```mermaid
+flowchart TD
+    SGF["Anonymous SGF + player color"] --> SAMPLE["64 evenly spaced own decisions"]
+
+    SAMPLE --> HUMAN["Frozen HumanSL network b18c384<br/>position before each move"]
+    HUMAN --> LOCAL["Trunk activation at the played point<br/>384-D"]
+    HUMAN --> GLOBAL["Global mean of the trunk<br/>384-D"]
+
+    SAMPLE --> ENGINE["KataGo + HumanSL outputs<br/>41 scalars per decision<br/>surprisal, policy rank, win rate, ownership change"]
+
+    LOCAL --> TOKEN["Decision token 810-D"]
+    GLOBAL --> TOKEN
+    ENGINE --> TOKEN
+
+    TOKEN --> ENCODER["Style encoder<br/>4-layer Transformer, width 256<br/>attention pooling"]
+    ENCODER --> GAME["Game vector 256-D, unit length"]
+
+    GAME --> REF["Candidate centroid<br/>mean of 10 reference games"]
+    GAME --> QUERY["Question centroid<br/>mean of 1-5 query games"]
+    REF --> COSINE["Cosine similarity<br/>question x 600 candidates"]
+    QUERY --> COSINE
+
+    OPENSET["Open-set v2 score<br/>profile encoders, pair reranker,<br/>rank prior, opening and prefix match"] --> FUSE
+    COSINE --> FUSE["Row-standardized fusion<br/>style weight 3 : open-set 1"]
+    FUSE --> TOP5["Top-5 candidates"]
+```
+
+Training of the style encoder (no official test player is used):
+
+```mermaid
+flowchart LR
+    TRAIN["Training set<br/>6,807 players, up to 16 games each"] --> BATCH["Batch: 128 players x 4 games<br/>15% decision dropout"]
+    BATCH --> ENC["Style encoder"]
+    ENC --> ARC["ArcFace loss<br/>player classification"]
+    ENC --> CON["Supervised contrastive loss<br/>same player close, others apart"]
+    VAL["600 held-out players<br/>validation cohort"] --> SELECT["Epoch selection"]
+    ENC --> SELECT
+    FINAL["600 further held-out players<br/>final cohort, read once"] --> REPORT["0.6234 versus 0.2954<br/>for the previous method"]
+    SELECT --> REPORT
+```
+
+### Original pools (400 candidates x 100 games, 5-20 query games, black only)
+
+```mermaid
+flowchart TD
+    SGF2["Anonymous SGF"] --> PROFILE["Per-game profile 9,198-D<br/>phase statistics of the 41 scalars"]
+    PROFILE --> ARCFACE["ArcFace encoders trained on the pool itself<br/>512-D and 1024-D, 3 seeds each"]
+    PROFILE --> OPEN2["Open-set profile encoders<br/>trained on the training set only"]
+    ARCFACE --> STAGE1["Stage 1: centroid cosine,<br/>weights chosen on held-out candidate games"]
+    OPEN2 --> STAGE1
+    STAGE1 --> RERANK["Stage 2: group-softmax reranker<br/>on the Top-20 candidates"]
+    RERANK --> TOP5B["Top-5 candidates"]
+```
+
 ## Competition 1: player identification
 
 The original candidate library contains 100 reference games per player;
