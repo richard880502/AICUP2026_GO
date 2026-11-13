@@ -46,12 +46,14 @@ def worker_modules() -> dict[str, types.ModuleType]:
     return bridge.load_vendor(RESEARCH / "vendor/KataGo-human-v1.15.0/python")
 
 
-def encode_job(config: dict, sgf: str, color: str) -> tuple[Any, np.ndarray]:
+def encode_job(
+    config: dict, sgf: str, color: str, samples: int
+) -> tuple[Any, np.ndarray]:
     """Builds network inputs for one game; malformed games return no rows."""
     try:
         moves = extract_rank_features.parse_moves(sgf)
         turns = extract_rank_features.katago.sample_player_turns(
-            moves, color, SAMPLES
+            moves, color, samples
         )
         if not turns:
             return None, np.zeros(0, np.int64)
@@ -68,8 +70,14 @@ def encode_job(config: dict, sgf: str, color: str) -> tuple[Any, np.ndarray]:
         return None, np.zeros(0, np.int64)
 
 
-def infer(model: torch.nn.Module, modules: dict, batch: list) -> np.ndarray:
-    """Returns [positions, 769] half-precision trunk tokens for queued games."""
+def infer(
+    model: torch.nn.Module, modules: dict, batch: list, local_only: bool
+) -> np.ndarray:
+    """Returns half-precision trunk tokens for queued games.
+
+    The full token is global mean, played-point activation and a pass flag
+    (769-D); with local_only it is the played-point activation alone (384-D).
+    """
     arrays = [
         torch.as_tensor(
             np.concatenate([item[0][column] for item in batch]), device="cuda:0"
@@ -86,26 +94,36 @@ def infer(model: torch.nn.Module, modules: dict, batch: list) -> np.ndarray:
         local = trunk.flatten(start_dim=2).transpose(1, 2)[
             torch.arange(len(points), device="cuda:0"), points
         ]
-        tokens = torch.cat(
-            (trunk.mean(dim=(2, 3)), local, torch.zeros_like(local[:, :1])), 1
+        tokens = (
+            local
+            if local_only
+            else torch.cat(
+                (trunk.mean(dim=(2, 3)), local, torch.zeros_like(local[:, :1])),
+                1,
+            )
         )
     values = tokens.cpu().numpy().astype(np.float16)
-    if values.shape[1] != DIMENSION or not np.isfinite(values).all():
+    if not np.isfinite(values).all():
         raise ValueError("Malformed or overflowing trunk tokens")
     return values
 
 
-def extract_shard(pool: Any, context: tuple, games: list) -> tuple:
+def extract_shard(  # pylint: disable=too-many-locals
+    pool: Any, context: tuple, games: list
+) -> tuple:
     """Encodes one shard with bounded outstanding CPU jobs and GPU batches."""
-    model, modules, config = context
-    tokens = np.zeros((len(games), SAMPLES, DIMENSION), np.float16)
-    masks = np.zeros((len(games), SAMPLES), bool)
+    model, modules, config, options = context
+    dimension = 384 if options.local_only else DIMENSION
+    tokens = np.zeros((len(games), options.samples, dimension), np.float16)
+    masks = np.zeros((len(games), options.samples), bool)
     pending: collections.deque = collections.deque()
     batch: list = []
 
     def flush() -> None:
         """Runs the queued games and stores each at its own row."""
-        values = infer(model, modules, [item[1:] for item in batch])
+        values = infer(
+            model, modules, [item[1:] for item in batch], options.local_only
+        )
         start = 0
         for index, _, points in batch:
             tokens[index, : len(points)] = values[start : start + len(points)]
@@ -119,7 +137,7 @@ def extract_shard(pool: Any, context: tuple, games: list) -> tuple:
         inputs, points = future.result()
         if inputs is not None:
             batch.append((index, inputs, points))
-        if len(batch) == 8:
+        if len(batch) == options.batch_games:
             flush()
 
     for index, game in enumerate(games):
@@ -127,7 +145,11 @@ def extract_shard(pool: Any, context: tuple, games: list) -> tuple:
             (
                 index,
                 pool.submit(
-                    encode_job, config, game["sgf_content"], game["color"]
+                    encode_job,
+                    config,
+                    game["sgf_content"],
+                    game["color"],
+                    options.samples,
                 ),
             )
         )
@@ -148,6 +170,20 @@ def main() -> None:  # pylint: disable=too-many-locals
     parser.add_argument("--workers", type=int, default=14)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument(
+        "--samples",
+        type=int,
+        default=SAMPLES,
+        help="Own decisions per game; games with fewer keep all of them.",
+    )
+    parser.add_argument("--local-only", action="store_true")
+    parser.add_argument("--batch-games", type=int, default=8)
+    parser.add_argument(
+        "--memory-fraction",
+        type=float,
+        default=0.0,
+        help="Hard cap on this process's share of GPU memory (shared GPU).",
+    )
+    parser.add_argument(
         "--reverse",
         action="store_true",
         help="Second worker: walk shards backwards and never mark completion.",
@@ -158,9 +194,13 @@ def main() -> None:  # pylint: disable=too-many-locals
         games = list(csv.DictReader(source))
     if arguments.limit:
         games = games[: arguments.limit]
+    if arguments.memory_fraction:
+        torch.cuda.set_per_process_memory_fraction(
+            arguments.memory_fraction, "cuda:0"
+        )
     modules, payload = bridge.load_assets(RESEARCH)
     model = bridge.build_model(modules, payload, "cuda:0", False)
-    context = (model, modules, payload["config"])
+    context = (model, modules, payload["config"], arguments)
     started = time.monotonic()
     done = 0
     with concurrent.futures.ProcessPoolExecutor(

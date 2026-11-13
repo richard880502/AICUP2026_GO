@@ -43,15 +43,21 @@ def load_model(name: str) -> tuple:
     checkpoint = torch.load(
         ROOT / name / "checkpoint.pt", map_location="cpu", weights_only=False
     )
+    if checkpoint.get("all_moves"):
+        train.use_all_moves()
     model = train.StyleEncoder(checkpoint["classes"]).to(train.DEVICE)
     model.load_state_dict(checkpoint["state"])
     scaling = tuple(
         torch.from_numpy(checkpoint[key]).to(train.DEVICE)
         for key in ("mean", "scale")
     )
-    trials = checkpoint["validation"]["fusion_trials"]
-    weight = max(trials, key=lambda key: trials[key])
-    return model, scaling, float(weight), checkpoint
+    validation = checkpoint["validation"]
+    trials = validation["fusion_trials"]
+    weight = float(max(trials, key=lambda key: trials[key]))
+    if validation[validation["aggregation"]] >= validation["fused_best"]:
+        # The style score alone beats every fusion on validation.
+        weight = float("inf")
+    return model, scaling, weight, checkpoint
 
 
 def cohort_scores(model, scaling, games: dict, positions: np.ndarray):
@@ -68,7 +74,8 @@ def final_report(model, scaling, weight: float) -> dict:
     _, local = infer.positions(OPEN, "final_holdout")
     scores = cohort_scores(model, scaling, corpus, local)
     base = fusion.standardize(np.load(OPEN / "final_scores.npz")["proposed"])
-    mixed = base + weight * fusion.standardize(scores)
+    style = fusion.standardize(scores)
+    mixed = style if np.isinf(weight) else base + weight * style
     return {
         "style_alone": evaluation.summarize(scores),
         "open_set": evaluation.summarize(base)["score"],
@@ -82,27 +89,36 @@ def pool(  # pylint: disable=too-many-locals
 ):
     """Writes fused Top-5 answers for one official new pool."""
     games, positions, names = official.pool_games(name)
+    suffix = train.LAYOUT.suffix
     trunk = np.concatenate(
         [
-            train.load_shards(ROOT / f"{name}_{group}", "tokens", 0)
+            train.load_shards(ROOT / f"{name}_{group}{suffix}", "tokens", 0)
             for group in ("candidates", "queries")
         ]
     )
     masks = np.concatenate(
         [
-            train.load_shards(ROOT / f"{name}_{group}", "masks", 0)
+            train.load_shards(ROOT / f"{name}_{group}{suffix}", "masks", 0)
             for group in ("candidates", "queries")
         ]
     )
     if len(trunk) != len(games["masks"]):
         raise ValueError("Trunk and engine caches hold different game counts")
-    agreement = float((masks == games["masks"]).all(1).mean())
-    if agreement < 0.999:
-        raise ValueError(f"Decision masks disagree: {agreement}")
+    if suffix:
+        engine = train.scatter_engine(games["decisions"], games["masks"], masks)
+        agreement = float(engine[:, :, 41].any(1).mean())
+        if agreement < 0.85:
+            raise ValueError(f"Engine rows could not be placed: {agreement}")
+    else:
+        engine = games["decisions"].astype(np.float16)
+        agreement = float((masks == games["masks"]).all(1).mean())
+        if agreement < 0.999:
+            raise ValueError(f"Decision masks disagree: {agreement}")
+        masks = masks & games["masks"]
     tokens = {
         "trunk": trunk,
-        "engine": games["decisions"].astype(np.float16),
-        "masks": masks & games["masks"],
+        "engine": engine,
+        "masks": masks,
         "colors": games["colors"].astype(np.int64),
     }
     scores = cohort_scores(model, scaling, tokens, positions)
@@ -113,7 +129,7 @@ def pool(  # pylint: disable=too-many-locals
         official.OUTPUT / name / "scores.npz"
     ) as arrays:
         opened = fusion.standardize(np.asarray(arrays["fused"]))
-    mixed = opened + weight * style
+    mixed = style if np.isinf(weight) else opened + weight * style
     order = np.argsort(-mixed, axis=1, kind="stable")[:, :5]
     alone = np.argsort(-style, axis=1, kind="stable")[:, :5]
     before = np.argsort(-opened, axis=1, kind="stable")[:, :5]
@@ -296,7 +312,7 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=True)
     report = {
         "epoch": checkpoint["epoch"],
-        "fusion_weight": weight,
+        "fusion_weight": "style_only" if np.isinf(weight) else weight,
         "validation": checkpoint["validation"],
         "final_holdout": final_report(model, scaling, weight),
     }
@@ -305,6 +321,14 @@ def main() -> None:
         report[name] = pool(name, model, scaling, weight, output)
         print(name, json.dumps(report[name]), flush=True)
     for name in ("pub", "priv"):
+        if train.LAYOUT.suffix:
+            # No all-moves tokens exist for the 100-game pools; their answers
+            # are carried over from the base submission unchanged.
+            (output / name).mkdir(exist_ok=True)
+            (output / name / "predictions.csv").write_bytes(
+                (arguments.base / name / "predictions.csv").read_bytes()
+            )
+            continue
         report[name] = original_pool(
             name, model, scaling, arguments.base, output
         )

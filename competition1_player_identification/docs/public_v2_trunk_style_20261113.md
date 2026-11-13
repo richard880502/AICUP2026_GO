@@ -130,3 +130,62 @@ now sum to 1.617; if the original pools score near the held-out estimate
 (0.97-0.99), the new Public pool is about 0.63-0.65, slightly below the
 offline 0.69. Remaining headroom is therefore almost entirely in the new
 pools.
+
+## Every own move instead of 64 samples: Public 0.8345466
+
+| Submission | Official Public |
+| --- | ---: |
+| Style encoder v2, 64 decisions, all four pools | 0.8084515 |
+| **Interim all-moves encoder (v4a) on new pools** | **0.8345466** |
+
+Gain **+0.0260951** Public, reported by the user on 2026-11-13. Only the
+new-pool answers changed; original pools keep the v2 answers. Upload SHA-256
+`a27c5a047d7a3caeaf09e69dbb14f80eca720af4296d99a155c1bfb433af1331`,
+artifacts in `production/trunk_style_20261113/submission_style_v4a/`.
+
+### Why the token count was tested first
+
+Two 20-epoch ablations of the v2 recipe (248k games, 64 decisions):
+
+| Variant | Best validation |
+| --- | ---: |
+| v2 as trained | 0.6683 |
+| every second decision only (32 tokens) | 0.5753 |
+| global trunk mean zeroed | 0.6572 |
+
+Halving the decisions costs 0.09, so more decisions per game were expected
+to help; the global mean is worth about 0.01 and doubles storage, so it was
+dropped from the new layout.
+
+A third run added the official candidate libraries as extra training players
+(2,000 players, a fifth of each player's games held out). Validation stayed
+at 0.667 and the held-out candidate games moved within noise, so that
+variant was not used.
+
+### All-moves layout (`extract.py --samples 160 --local-only`, `train.py --all-moves`)
+
+- Every own non-pass move is a token, up to 160 per game (99% of games have
+  at most 160; longer games are sampled evenly). Mean 114 tokens per game.
+- A token is the 384-D played-point trunk activation only.
+- The 41 engine scalars exist for the 64 originally sampled decisions. They
+  are placed at those decisions' positions (`scatter_engine`) with a presence
+  flag; other tokens carry zeros. Placement was verified against the earlier
+  tokens: cosine 1.000 at the computed positions, 0.65 when shifted by one.
+- Encoder input 426-D, otherwise the same model and losses.
+
+Interim encoder v4a: the 16-game corpus only (109k training games), 30
+epochs, no engine dropout.
+
+| | v1: 64 decisions, 109k games | v2: 64 decisions, 248k games | v4a: all moves, 109k games |
+| --- | ---: | ---: | ---: |
+| Validation | 0.6235 | 0.6683 | 0.7122 |
+| Final cohort, alone | 0.6234 | 0.6818 | 0.7270 [0.704, 0.750] |
+
+Final cohort by query games (v4a): 1: 0.491, 2: 0.707, 3: 0.813, 5: 0.897.
+Fusing with the open-set score no longer helps (final 0.7239, validation
+0.7073 versus 0.7122 alone); the uploaded file still used the fused score.
+`apply.py` now uses the style score alone when validation favours it.
+
+The official gain on the new Public pool (+0.052) matches the offline final
+gain (+0.045). A full run with the 139k extra training games in the same
+layout was still extracting when this was written.

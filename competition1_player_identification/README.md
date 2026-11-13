@@ -6,9 +6,10 @@ locally and intentionally excluded from Git.
 
 ## Current official v2 Public result
 
-**0.8084515**, reported by the user on 2026-11-13: a per-move style encoder on
-frozen HumanSL trunk activations, trained on 248k games, answers all four
-pools (0.7187986 with the first version on the new pools only)
+**0.8345466**, reported by the user on 2026-11-13: a per-move style encoder on
+frozen HumanSL trunk activations reads every own move of a game on the new
+pools; the original pools use the 64-decision version (0.8084515 with that
+version on all four pools)
 ([record](docs/public_v2_trunk_style_20261113.md), `experiments/trunk_style/`).
 Earlier the same day: 0.5640548 (two-way fusion) and 0.5525235 (open-set only). See
 [the record](docs/public_v2_openset_20261113.md). The paragraphs below

@@ -6,14 +6,14 @@ their scores must not be compared as if they were the same task.
 
 | Directory | Task | Internal benchmarks |
 | --- | --- | ---: |
-| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way final cohort: **0.6818** (open-set v2: 0.295403) |
+| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way final cohort: **0.7270** (open-set v2: 0.295403) |
 | [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
 
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.8084515** (2026-11-13, per-move HumanSL
-trunk style encoder on all four pools; see
+Competition 1's v2 **Public best is 0.8345466** (2026-11-13, per-move HumanSL
+trunk style encoder reading every own move; see
 [the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
 Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
 methods on all four pools (see
@@ -32,7 +32,7 @@ submission record is in
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
-## Current best architecture: player identification (Public 0.8084515)
+## Current best architecture: player identification (Public 0.8345466)
 
 The submission answers the two kinds of pools with different pipelines,
 because the reference library per candidate differs tenfold (100 games
@@ -43,16 +43,14 @@ versus 10). Details and offline numbers:
 
 ```mermaid
 flowchart TD
-    SGF["Anonymous SGF + player color"] --> SAMPLE["64 evenly spaced own decisions"]
+    SGF["Anonymous SGF + player color"] --> SAMPLE["Every own move<br/>up to 160 per game, about 114 on average"]
 
     SAMPLE --> HUMAN["Frozen HumanSL network b18c384<br/>position before each move"]
     HUMAN --> LOCAL["Trunk activation at the played point<br/>384-D"]
-    HUMAN --> GLOBAL["Global mean of the trunk<br/>384-D"]
 
-    SAMPLE --> ENGINE["KataGo + HumanSL outputs<br/>41 scalars per decision<br/>surprisal, policy rank, win rate, ownership change"]
+    SAMPLE --> ENGINE["KataGo + HumanSL outputs<br/>41 scalars on 64 sampled moves, plus a presence flag<br/>surprisal, policy rank, win rate, ownership change"]
 
-    LOCAL --> TOKEN["Decision token 810-D"]
-    GLOBAL --> TOKEN
+    LOCAL --> TOKEN["Decision token 426-D"]
     ENGINE --> TOKEN
 
     TOKEN --> ENCODER["Style encoder<br/>4-layer Transformer, width 256<br/>attention pooling"]
@@ -72,13 +70,13 @@ Training of the style encoder (no official test player is used):
 
 ```mermaid
 flowchart LR
-    TRAIN["Training set<br/>6,807 players, up to 48 games each"] --> BATCH["Batch: 128 players x 4 games<br/>15% decision dropout"]
+    TRAIN["Training set<br/>6,807 players, up to 16 games each"] --> BATCH["Batch: 128 players x 4 games<br/>15% decision dropout"]
     BATCH --> ENC["Style encoder"]
     ENC --> ARC["ArcFace loss<br/>player classification"]
     ENC --> CON["Supervised contrastive loss<br/>same player close, others apart"]
     VAL["600 held-out players<br/>validation cohort"] --> SELECT["Epoch selection"]
     ENC --> SELECT
-    FINAL["600 further held-out players<br/>final cohort"] --> REPORT["0.6818 versus 0.2954<br/>for the previous method"]
+    FINAL["600 further held-out players<br/>final cohort"] --> REPORT["0.7270 versus 0.2954<br/>for the open-set v2 method"]
     SELECT --> REPORT
 ```
 
@@ -86,7 +84,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    SGF2["Anonymous SGF"] --> STYLE2["Same style encoder as above<br/>never trained on pool players"]
+    SGF2["Anonymous SGF"] --> STYLE2["Style encoder, 64-decision version<br/>never trained on pool players"]
     SGF2 --> PROFILE["Per-game profile 9,198-D<br/>phase statistics of the 41 scalars"]
     PROFILE --> ARCFACE["ArcFace encoders trained on the pool itself<br/>512-D and 1024-D, 3 seeds each"]
     STYLE2 --> SCOS["Centroid cosine<br/>100 reference games per candidate"]

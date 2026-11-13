@@ -12,6 +12,8 @@ epoch; the final cohort is never read here.
 """
 
 import argparse
+import csv
+import dataclasses
 import json
 import pathlib
 import time
@@ -28,6 +30,55 @@ from competition1_player_identification.experiments.open_set_v2 import fusion
 
 OPEN = dataset.ROOT
 ROOT = pathlib.Path("production/trunk_style_20261113")
+POOLS = pathlib.Path("production/player_v2_20261111")
+POOL_NAMES = ("pub", "priv", "pub2", "priv2")
+csv.field_size_limit(10**9)
+# Token layout. The default is 64 sampled decisions with the 769-D trunk
+# descriptor; use_all_moves() switches to every own move (up to 160) with the
+# 384-D played-point activation and a per-token engine-presence flag.
+@dataclasses.dataclass
+class Layout:
+    """Token layout: decisions per game, trunk width, engine width, shard suffix."""
+
+    length: int = 64
+    trunk: int = 769
+    engine: int = 41
+    suffix: str = ""
+
+
+LAYOUT = Layout()
+
+
+def use_all_moves() -> None:
+    """Selects the all-moves token layout for every later call."""
+    LAYOUT.length, LAYOUT.trunk, LAYOUT.engine = 160, 384, 42
+    LAYOUT.suffix = "_all"
+
+
+def scatter_engine(
+    values: np.ndarray, valid: np.ndarray, masks: np.ndarray
+) -> np.ndarray:
+    """Places the 64 sampled engine rows at their own-move positions.
+
+    The engine cache used the same evenly spaced sampler, so a game with n
+    own moves has its engine rows at linspace(0, n - 1, min(64, n)). Games
+    truncated at the layout length keep no engine rows. The last channel
+    flags tokens that carry engine scalars.
+    """
+    length = masks.shape[1]
+    output = np.zeros((len(masks), length, 42), np.float16)
+    counts = masks.sum(1)
+    sampled = valid.sum(1)
+    for count in np.unique(counts):
+        if count == 0 or count >= length:
+            continue
+        kept = min(64, int(count))
+        rows = np.flatnonzero((counts == count) & (sampled == kept))
+        if len(rows):
+            offsets = np.linspace(0, count - 1, kept, dtype=int)
+            output[rows[:, None], offsets[None], :41] = values[rows, :kept]
+            output[rows[:, None], offsets[None], 41] = 1
+    return output
 DEVICE = "cuda:0"
 
 
@@ -57,35 +108,48 @@ def fill_shards(
 
 
 def load_corpus(  # pylint: disable=too-many-locals
-    limit: int, extra: bool = False
+    limit: int, extra: bool = False, reserve: int = 0
 ) -> dict:
     """Loads trunk tokens, engine scalars where cached, colors and splits.
 
     The 16-game corpus has engine scalars; optional extra training games
     (corpus2) have none and are flagged so their engine channels stay zero.
     """
-    base_paths = sorted((ROOT / "corpus").glob("shard_*.npz"))
+    suffix = LAYOUT.suffix
+    base_paths = sorted((ROOT / f"corpus{suffix}").glob("shard_*.npz"))
     if limit:
         base_paths = base_paths[:limit]
-    extra_paths = sorted((ROOT / "corpus2").glob("shard_*.npz")) if extra else []
+    extra_paths = (
+        sorted((ROOT / f"corpus2{suffix}").glob("shard_*.npz")) if extra else []
+    )
     sizes = []
     for path in base_paths + extra_paths:
         with np.load(path) as arrays:
             sizes.append(len(arrays["masks"]))
     count = sum(sizes[: len(base_paths)])
     total = sum(sizes)
-    trunk = np.zeros((total, 64, 769), np.float16)
-    masks = np.zeros((total, 64), bool)
+    trunk = np.zeros(
+        (total + reserve, LAYOUT.length, LAYOUT.trunk), np.float16
+    )
+    masks = np.zeros((total + reserve, LAYOUT.length), bool)
     fill_shards(extra_paths, trunk, masks, fill_shards(base_paths, trunk, masks, 0))
-    engine = np.zeros((total, 64, 41), np.float16)
-    engine[:count] = load_shards(
+    engine = np.zeros(
+        (total + reserve, LAYOUT.length, LAYOUT.engine), np.float16
+    )
+    cached = load_shards(
         OPEN / "engine_features/candidates", "tokens", (count + 127) // 128
     )[:count]
     engine_masks = load_shards(
         OPEN / "engine_features/candidates", "masks", (count + 127) // 128
     )[:count]
-    agreement = float((masks[:count] == engine_masks).all(1).mean())
-    masks[:count] &= engine_masks
+    if suffix:
+        engine[:count] = scatter_engine(cached, engine_masks, masks[:count])
+        agreement = float(engine[:count, :, 41].any(1).mean())
+    else:
+        engine[:count] = cached
+        agreement = float((masks[:count] == engine_masks).all(1).mean())
+        masks[:count] &= engine_masks
+    del cached
     everything = np.load(OPEN / "engine_inputs/global_indices.npy")
     selected = everything[:count]
     if extra:
@@ -104,13 +168,105 @@ def load_corpus(  # pylint: disable=too-many-locals
         "trunk": trunk,
         "engine": engine,
         "masks": masks,
-        "has_engine": np.arange(total) < count,
-        "colors": raw["colors"][selected].astype(np.int64),
+        "has_engine": np.arange(total + reserve) < count,
+        "rows": total,
+        "colors": np.concatenate(
+            (raw["colors"][selected].astype(np.int64), np.zeros(reserve, np.int64))
+        ),
         "groups": groups,
         "train_rows": train_rows,
         "validation": validation,
         "mask_agreement": agreement,
     }
+
+
+def fill_pool(name: str, data: dict, offset: int) -> np.ndarray:
+    """Copies one official candidate library into reserved rows in place.
+
+    Only candidate games and their published player ids are read; official
+    questions are never loaded here. Returns each game's candidate index.
+    """
+    parts: dict = {
+        key: [] for key in ("tokens", "masks", "group_indices", "record_ids")
+    }
+    for path in sorted(
+        (POOLS / name / "features/candidates").glob("shard_*.npz")
+    ):
+        with np.load(path) as arrays:
+            for key, values in parts.items():
+                values.append(np.asarray(arrays[key]))
+    engine = {key: np.concatenate(values) for key, values in parts.items()}
+    directory = ROOT / f"{name}_candidates"
+    if not np.array_equal(
+        load_shards(directory, "record_ids", 0), engine["record_ids"]
+    ):
+        raise ValueError("Trunk and engine caches list different games")
+    stop = fill_shards(
+        sorted(directory.glob("shard_*.npz")), data["trunk"], data["masks"], offset
+    )
+    if stop - offset != len(engine["masks"]):
+        raise ValueError("Candidate library size mismatch")
+    data["masks"][offset:stop] &= engine["masks"]
+    data["engine"][offset:stop] = engine["tokens"]
+    data["has_engine"][offset:stop] = True
+    metadata = json.loads((POOLS / name / "features/metadata.json").read_text())
+    with open(metadata["candidates"], encoding="utf-8", newline="") as source:
+        colors = {row["game_id"]: row["color"] for row in csv.DictReader(source)}
+    data["colors"][offset:stop] = [
+        int(colors[key] == "W") for key in engine["record_ids"]
+    ]
+    return engine["group_indices"]
+
+
+def add_pools(data: dict) -> None:
+    """Adds candidate libraries as extra training players.
+
+    A fixed fifth of every candidate's games (20 of 100, 2 of 10) is kept
+    out of training so retrieval of unseen games against trained reference
+    games can be measured on the official population itself.
+    """
+    generator = np.random.default_rng(20261115)
+    data["pool_eval"] = {}
+    offset = data["rows"]
+    for name in POOL_NAMES:
+        owners = fill_pool(name, data, offset)
+        references, held = [], []
+        for owner in range(int(owners.max()) + 1):
+            rows = offset + generator.permutation(np.flatnonzero(owners == owner))
+            cut = len(rows) // 5
+            held.append(rows[:cut])
+            references.append(rows[cut:])
+            data["groups"].append(rows[cut:])
+        data["pool_eval"][name] = (np.stack(references), np.stack(held))
+        data["train_rows"] = np.concatenate(
+            (data["train_rows"], np.concatenate(references))
+        )
+        offset += len(owners)
+    if offset != len(data["trunk"]):
+        raise ValueError("Reserved rows do not match the candidate libraries")
+
+
+def pool_scores(model, data: dict, scaling: tuple) -> dict:
+    """Scores unseen candidate games against the other games of each pool."""
+    report = {}
+    for name, (references, held) in data["pool_eval"].items():
+        players, width = references.shape
+        centroids = np.reshape(
+            encode(model, data, scaling, references.ravel()), (players, width, -1)
+        ).mean(1)
+        centroids /= np.linalg.norm(centroids, axis=1, keepdims=True)
+        games = np.reshape(
+            encode(model, data, scaling, held.ravel()),
+            (players, held.shape[1], -1),
+        )
+        for count in (1, 2) if held.shape[1] == 2 else (5, 10):
+            query = games[:, :count].mean(1)
+            scores = query @ centroids.T
+            ranks = (scores > np.diag(scores)[:, None]).sum(1)
+            report[f"{name}_k{count}"] = float(
+                np.where(ranks < 5, np.exp(-ranks), 0.0).mean()
+            )
+    return report
 
 
 def fit_scaling(data: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -123,7 +279,16 @@ def fit_scaling(data: dict) -> tuple[np.ndarray, np.ndarray]:
     values = np.concatenate(
         (data["trunk"][rows][valid], data["engine"][rows][valid]), axis=1
     ).astype(np.float32)
-    return values.mean(0), values.std(0).clip(min=1e-3)
+    mean, scale = values.mean(0), values.std(0).clip(min=1e-3)
+    if LAYOUT.suffix:
+        # Engine statistics come from tokens that carry engine scalars; the
+        # presence flag itself is left as 0/1.
+        width = LAYOUT.trunk
+        block = values[values[:, -1] > 0.5, width:-1]
+        mean[width:-1] = block.mean(0)
+        scale[width:-1] = block.std(0).clip(min=1e-3)
+        mean[-1], scale[-1] = 0.0, 1.0
+    return mean, scale
 
 
 class StyleEncoder(torch.nn.Module):  # pylint: disable=too-many-instance-attributes
@@ -132,9 +297,12 @@ class StyleEncoder(torch.nn.Module):  # pylint: disable=too-many-instance-attrib
     def __init__(self, classes: int, width: int = 256, dimension: int = 256):
         super().__init__()
         self.project = torch.nn.Sequential(
-            torch.nn.Linear(810, width), torch.nn.LayerNorm(width)
+            torch.nn.Linear(LAYOUT.trunk + LAYOUT.engine, width),
+            torch.nn.LayerNorm(width),
         )
-        self.step = torch.nn.Parameter(torch.randn(1, 64, width) * 0.02)
+        self.step = torch.nn.Parameter(
+            torch.randn(1, LAYOUT.length, width) * 0.02
+        )
         self.color = torch.nn.Embedding(2, width)
         block = torch.nn.TransformerEncoderLayer(
             width,
@@ -179,9 +347,14 @@ def batch_tensors(data: dict, scaling: tuple, rows: np.ndarray) -> tuple:
     tokens = ((tokens - mean) / scale).clamp(-10, 10)
     valid = torch.from_numpy(data["masks"][rows]).to(DEVICE)
     tokens = tokens * valid[..., None]
+    width = LAYOUT.trunk
+    if LAYOUT.suffix:
+        tokens[..., width:-1] = tokens[..., width:-1] * tokens[..., -1:]
+    elif data.get("drop_global"):
+        tokens[..., :384] = 0
     if "has_engine" in data:
         present = torch.from_numpy(data["has_engine"][rows]).to(DEVICE)
-        tokens[..., 769:] = tokens[..., 769:] * present[:, None, None]
+        tokens[..., width:] = tokens[..., width:] * present[:, None, None]
     colors = torch.from_numpy(data["colors"][rows]).to(DEVICE)
     return tokens, valid, colors
 
@@ -268,17 +441,72 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
     )
     parser.add_argument("--engine-dropout", type=float, default=0.0)
     parser.add_argument(
+        "--all-moves",
+        action="store_true",
+        help="Use every own move (corpus_all shards) instead of 64 samples.",
+    )
+    parser.add_argument(
+        "--token-stride",
+        type=int,
+        default=1,
+        help="Ablation: keep every n-th sampled decision only.",
+    )
+    parser.add_argument(
+        "--no-global",
+        action="store_true",
+        help="Ablation: zero the 384 global-mean trunk channels.",
+    )
+    parser.add_argument(
+        "--pools",
+        action="store_true",
+        help="Also train on official candidate libraries (player ids only).",
+    )
+    parser.add_argument(
+        "--baseline",
+        default="",
+        help="Checkpoint name scored on the pool hold-out before training.",
+    )
+    parser.add_argument(
         "--no-engine",
         action="store_true",
         help="Ablation: zero the 41 engine scalars, keep trunk tokens only.",
     )
     arguments = parser.parse_args()
     torch.manual_seed(20261113)
-    data = load_corpus(arguments.limit_shards, arguments.extra)
+    if arguments.all_moves:
+        if arguments.pools:
+            raise ValueError("Candidate pools have no all-moves engine layout")
+        use_all_moves()
+    data = load_corpus(
+        arguments.limit_shards, arguments.extra, 92000 if arguments.pools else 0
+    )
     scaling_arrays = fit_scaling(data)
+    if arguments.pools:
+        add_pools(data)
+    data["drop_global"] = arguments.no_global
+    if arguments.token_stride > 1:
+        strided = np.zeros(LAYOUT.length, bool)
+        strided[:: arguments.token_stride] = True
+        data["masks"] &= strided
     if arguments.no_engine:
         data["has_engine"] = np.zeros(len(data["trunk"]), bool)
     scaling = tuple(torch.from_numpy(value).to(DEVICE) for value in scaling_arrays)
+    if arguments.baseline:
+        previous = torch.load(
+            ROOT / arguments.baseline / "checkpoint.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
+        reference = StyleEncoder(previous["classes"]).to(DEVICE)
+        reference.load_state_dict(previous["state"])
+        old_scaling = tuple(
+            torch.from_numpy(previous[key]).to(DEVICE) for key in ("mean", "scale")
+        )
+        print(
+            json.dumps({"baseline_pool_holdout": pool_scores(reference, data, old_scaling)}),
+            flush=True,
+        )
+        del reference
     model = StyleEncoder(len(data["groups"])).to(DEVICE)
     steps = max(1, len(data["train_rows"]) // (arguments.players * 4))
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=0.05)
@@ -309,7 +537,7 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
             rows, labels = sample_batch(data, generator, arguments.players)
             tokens, valid, colors = batch_tensors(data, scaling, rows)
             dropped = torch.rand(len(rows), device=DEVICE) < arguments.engine_dropout
-            tokens[dropped, :, 769:] = 0
+            tokens[dropped, :, LAYOUT.trunk :] = 0
             keep = torch.rand(valid.shape, device=DEVICE) > 0.15
             valid = valid & (keep | (valid.sum(1, keepdim=True) <= 8))
             with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -331,6 +559,8 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
         }
         if complete and (epoch % 2 == 0 or epoch == arguments.epochs):
             row["validation"] = validate(model, data, scaling)
+            if arguments.pools:
+                row["pool_holdout"] = pool_scores(model, data, scaling)
             score = row["validation"][row["validation"]["aggregation"]]
             if score > best:
                 best = score
@@ -340,6 +570,7 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
                         "mean": scaling_arrays[0],
                         "scale": scaling_arrays[1],
                         "classes": len(data["groups"]),
+                        "all_moves": arguments.all_moves,
                         "epoch": epoch,
                         "validation": row["validation"],
                     },
