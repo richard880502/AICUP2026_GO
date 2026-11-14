@@ -89,6 +89,16 @@ identified opponents in even games the asked player wins 45% when registered
 one rank below the opponent and 59% when one rank above, so the result barely
 separates adjacent ranks.
 
+## Follow-up: rank of stylistic neighbours (2026-11-14, negative)
+
+Each holdout3 player's own games were embedded with the style encoder that
+never saw that player (), and similarity to the other
+half's labelled players (holdout3 removed) gave a rank posterior
+(, 1,644 questions covered). Alone it scores 0.653 although the
+encoder was never trained on rank, but with C1+C2 it is 0.711 against 0.708
+for C1+C2 through the same logistic layer (delta -0.001, CI [-0.013, +0.012]).
+Playing style carries rank information that C1+C2 already has.
+
 ## Official questions
 
 Model fitted on all 2,000 holdout3 questions (strict list), applied with the
