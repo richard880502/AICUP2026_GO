@@ -1,6 +1,7 @@
 # Opponent identity as rank evidence (2026-11-14, exploratory)
 
-Not adopted and not submitted. Whether this use of the data is acceptable
+Submitted by the owner on 2026-11-14: Public 0.7586411 (previous 0.7227214;
+holdout3 strict estimate 0.7585). Whether this use of the data is acceptable
 under the competition rules is the owner's decision (see "Caveat").
 
 ## Finding
