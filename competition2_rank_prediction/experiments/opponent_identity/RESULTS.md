@@ -65,6 +65,30 @@ games. Per-game evidence for the true rank is the same for games in and out
 of v4's corpus (0.268 versus 0.263 probability on the own rank; 4,429 and
 7,623 even games inside mixed questions).
 
+## Follow-up: trained on simulated questions, and game result (2026-11-14)
+
+A question-level model trained only on simulated questions built from the
+5,439 training players outside holdout3 (5-14 games each, a random quarter of
+the known-player list hidden, players sampled rank-balanced) uses no holdout3
+label except the per-size fusion weight:
+
+| Method | Alone | + C1+C2 | Paired delta [95% CI] | Halves |
+| --- | ---: | ---: | --- | --- |
+| Full 3x10x10 transition tables | 0.7429 | 0.7534 | +0.036 [+0.023, +0.050] | +0.035 / +0.038 |
+| Per-game MLP | 0.7414 | 0.7575 | +0.040 [+0.027, +0.054] | +0.039 / +0.042 |
+| Tables split by game result | 0.7404 | 0.7567 | +0.040 [+0.026, +0.053] | +0.035 / +0.044 |
+| MLP with game result | 0.7345 | 0.7483 | +0.031 [+0.018, +0.045] | +0.026 / +0.036 |
+
+This independently reproduces the gain and the plateau near 0.76. Sampling
+players unbalanced costs about 0.03 alone: the remaining training players are
+far from rank-balanced (one rank 24%, another 3%) while holdout3 is 10% each.
+
+Game result (HumanSL value head on the asked player's opponent's last three
+decisions; 85% of games decided beyond 0.9) adds nothing. Among confidently
+identified opponents in even games the asked player wins 45% when registered
+one rank below the opponent and 59% when one rank above, so the result barely
+separates adjacent ranks.
+
 ## Official questions
 
 Model fitted on all 2,000 holdout3 questions (strict list), applied with the
