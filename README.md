@@ -1,5 +1,7 @@
 # AICUP 2026 Go Research
 
+[中文說明](README.zh-TW.md)
+
 This monorepo keeps the two AI CUP Go tasks explicitly separated. They use
 different labels, evaluation metrics, model heads, and inference protocols;
 their scores must not be compared as if they were the same task.
@@ -12,8 +14,9 @@ their scores must not be compared as if they were the same task.
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.8801077** (2026-11-14, per-move HumanSL
-trunk style encoder plus move-to-move matching on the new pools; see
+Competition 1's v2 **Public best is 0.8819787** (2026-11-14, per-move HumanSL
+trunk style encoder plus move-to-move matching on all four pools; 0.8801077
+with matching on the new pools only; see
 [the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
 Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
 methods on all four pools (see
@@ -24,7 +27,10 @@ submission's 0.4650701 (+0.0585901). The v2 score averages original and new
 Public questions and is not comparable to the historical 0.923040 proxy.
 See the [official submission record](competition1_player_identification/docs/public_v2_20261111.md).
 
-Competition 2's 2026-11-06 submission received **0.7227214 Public**,
+Competition 2's **Public best is 0.7586411** (2026-11-14, opponent identity
+added to the previous pipeline; see
+[the record](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md)).
+The 2026-11-06 submission received 0.7227214 Public,
 reported by the user. Its Private score is not yet available. The exact
 submission record is in
 [`competition2_rank_prediction/docs/public_submission_20261030.md`](competition2_rank_prediction/docs/public_submission_20261030.md).
