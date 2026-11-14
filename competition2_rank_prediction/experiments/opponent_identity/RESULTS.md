@@ -92,9 +92,9 @@ separates adjacent ranks.
 ## Follow-up: rank of stylistic neighbours (2026-11-14, negative)
 
 Each holdout3 player's own games were embedded with the style encoder that
-never saw that player (), and similarity to the other
+never saw that player (`style_v4_fold{0,1}`), and similarity to the other
 half's labelled players (holdout3 removed) gave a rank posterior
-(, 1,644 questions covered). Alone it scores 0.653 although the
+(`style_knn.py`, 1,644 questions covered). Alone it scores 0.653 although the
 encoder was never trained on rank, but with C1+C2 it is 0.711 against 0.708
 for C1+C2 through the same logistic layer (delta -0.001, CI [-0.013, +0.012]).
 Playing style carries rank information that C1+C2 already has.

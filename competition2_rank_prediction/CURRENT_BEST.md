@@ -7,7 +7,19 @@ submission. All 800 Public and Private questions used the default C1+C2
 pipeline, with no fallback. The Private score has not yet been disclosed.
 See [the submission record](docs/public_submission_20261030.md).
 
-Last updated: 2026-11-06 (official Public result and production source sync).
+Last updated: 2026-11-10.
+The completed [expanded d96 training experiment](experiments/dense_encoder_scale/RESULTS.md)
+scored 0.714955 versus original C1+C2 0.717012 on the historical 2,000-player
+cross-fit. The paired delta was -0.002057 (95% interval [-0.007298, +0.003000]);
+both folds regressed. Keep the original production model and submission.
+
+The user reports **0.7195608** for the Joint alternate submission, versus
+the original **0.7227214** (delta **-0.0031606**). Joint is not adopted;
+the original C1+C2 remains the Public-best production method.
+The completed [reward-alignment experiment](experiments/reward_alignment/RESULTS.md)
+improved exploratory calibration CV from original0.710606 to0.712950,
+but the paired interval versus original crosses zero. Original C1+C2
+remains production; no reward-aligned alternate submission was generated.
 The internal C1+C2 experiment was registered and evaluated on 2026-10-21.
 
 ## Stable production pipeline
