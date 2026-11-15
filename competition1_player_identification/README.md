@@ -6,6 +6,14 @@ locally and intentionally excluded from Git.
 
 ## Current official v2 Public result
 
+**0.8961831**, reported by the user on 2026-11-15 (final): the new-pool
+scores of two style encoders, 384-D and 960-D move tokens, are summed
+before CSLS; the original pools use move matching with the 384-D encoder
+(0.8819787). Retraining on all 8,007 labelled players did not help
+(0.8833-0.8922). See the v6, v9 and later sections of the
+[record](docs/public_v2_trunk_style_20261113.md). The paragraph below
+describes the previous best.
+
 **0.8801077**, reported by the user on 2026-11-14: a per-move style encoder on
 frozen HumanSL trunk activations reads every own move of a game on the new
 pools, fused with move-to-move matching and a CSLS correction (0.8592604

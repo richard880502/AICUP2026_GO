@@ -1,7 +1,8 @@
 # Opponent identity as rank evidence (2026-11-14, exploratory)
 
 Submitted by the owner on 2026-11-14: Public 0.7586411 (previous 0.7227214;
-holdout3 strict estimate 0.7585). Whether this use of the data is acceptable
+holdout3 strict estimate 0.7585). The v4 + v7 version below scored
+**0.7599623** on 2026-11-15 and is the final rank submission. Whether this use of the data is acceptable
 under the competition rules is the owner's decision (see "Caveat").
 
 ## Finding
@@ -105,8 +106,55 @@ Playing style carries rank information that C1+C2 already has.
 Model fitted on all 2,000 holdout3 questions (strict list), applied with the
 full 6,807-class list. 248 of 800 answers differ from the 2026-10-30
 submission (15 by two or more ranks; public 65 up / 55 down, private 54 up /
-74 down). Mean top probability 0.46 -> 0.66. Candidate file (not submitted):
+74 down). Mean top probability 0.46 -> 0.66. This file was submitted (Public
+0.7586411) despite its name:
 `production/rank_opponent_identity_20261114/rank_opponent_identity_NOT_SUBMITTED.csv`.
+
+## Follow-up: v4 + v7 opponent identification (v47): Public 0.7599623
+
+Reported by the user on 2026-11-15; this is the final rank submission.
+
+The opponent side of every game is also embedded with the 960-D style
+encoder v7 (`competition1_player_identification/docs/public_v2_trunk_style_20261113.md`),
+and the class cosines of v4 and v7 are averaged before the softmax. The two
+encoders agree on the top class in only 36% of holdout3 games, so the
+average is a better identifier than either. Nothing else changes: the same
+~45-parameter model, fitted on the 2,000 holdout3 questions (strict list).
+
+| Method (holdout3 strict, + C1+C2) | Holdout3 | Public |
+| --- | ---: | ---: |
+| v4 identification | 0.7585 | 0.7586411 |
+| **v4 + v7 identification** | **0.7632** | **0.7599623** |
+| v4 + v7, weights per question size | 0.7642 | not uploaded |
+
+The holdout3 gain of +0.005 shrank to +0.0013 on Public. Weights per
+question size add another +0.001 on holdout3 and were not worth a
+submission. Mean top probability of the official answers: 0.45 before
+opponent identity, 0.65 after.
+
+## Follow-up: checks for further rank information (2026-11-15, all negative)
+
+These looked for information the leaderboard leaders (Public 0.81) might use
+and that the model above does not:
+
+| Check | Result |
+| --- | --- |
+| Opponents that are Competition 1 pool players | At the threshold passed by 1% of non-pool opponents, 1.9% of test opponents pass (18.6% of original-pool queries do). Almost none. |
+| Later games of a question more informative (time drift) | P(opponent rank = own rank) 0.266-0.273 in all five position buckets. Flat. |
+| Rank from "who else played this opponent" (nearest training games by opponent style, known or not) | Alone 0.747; on top of C1+C2 + identity -0.007 to +0.002, CI includes 0. |
+| Rank-balanced decoding (holdout3 is 10% per rank) | -0.003 / -0.002 on the two halves. The free official predictions are not far from balanced either. |
+| Same player split over several official questions | Best-partner similarity of official questions (median 0.501, 9.7% above 0.7) matches Competition 1 candidates known to be distinct players (0.494, 12.7%). No evidence. |
+| Official test games inside the 1M training games | None, whether whole games or the first 120 or 80 moves are compared. |
+| Test players sharing opponents | Yes: of 1,755 games identified with probability > 0.5, the 982 distinct opponents include 361 met by two or more test players (up to 13). For known opponents this adds nothing beyond their registered rank, which is already used. A joint model over unknown shared opponents was estimated at +0.002 to +0.005 and not built. |
+
+Also negative and recorded elsewhere: self-play KataGo trunk features
+(Competition 1 record), ten-profile HumanSL likelihoods and HumanSL policy
+fine-tuning (earlier Competition 2 experiments).
+
+Conclusion: opponent identity uses the registered ranks of recognisable
+opponents; the remaining error comes from registered ranks that differ from
+playing strength and from the ~30% of opponents that are not training
+players. No source in the official data closed that gap.
 
 ## Caveat
 
@@ -118,9 +166,35 @@ organisers' rules before using this for a counted submission.
 
 ## Reproduce
 
-Scripts and intermediate files are kept outside Git in
-`production/rank_opponent_identity_20261114/` (`scripts/`: `link_inputs.py`,
-`link_test.py`, `h3_link.py` -> `h3_dump.py`, `h3_bayes.py`, `h3_bayes_b.py`,
-`h3_final.py`, `h3_leak.py`, `h3_trunc.py`, `gallery8007.py`, `cls8007.py`,
-`ens_id.py`, `id_match.py`). They have not been brought to the repository's
-lint standard.
+The chain that produced the final submission v47 is in this directory.
+Run from the repository root with `PYTHONPATH=.:competition1_player_identification`
+and `M=competition2_rank_prediction.experiments.opponent_identity`:
+
+1. `python -m $M.map_h3` and `python -m $M.full_qprob`: holdout3 question
+   map and the C1+C2 baseline probabilities.
+2. `python -m $M.opp_sample 6144` and `python -m $M.link_inputs`: opponent-side
+   game lists for training, holdout3 and the official questions.
+3. Trunk tokens of those lists with
+   `competition1_player_identification.experiments.trunk_style.extract`
+   (384-D) and `extract_rich` (960-D).
+4. `python -m $M.link_test`: v4 class cosines and controls for the official
+   opponents (`test_opp_scores.npz`).
+5. `python -m $M.h3_dump`: v4 class cosines for holdout3 (`h3_sims.pt`).
+6. `python -m $M.h3_v7`: v7 cosines and the v4 + v7 average.
+7. `python -m $M.h3_final_v47`: leak check, fit on holdout3, official answers
+   (`rank_opponent_identity_v47.csv`).
+
+Gaps: `h3_opp.csv` was written inline and has no script, and the 384-D token
+folders of steps 3-5 (`h3_opp/`, `tokens/`, `present/`, `test_own/`) were
+deleted to free disk space, so steps 4-5 cannot be re-run without
+re-extracting them. Their outputs are kept (`h3_sims.pt` under
+`production/rank_opponent_identity_20261114/`). The intermediate files live
+in `/tmp2/richard/claude_scratch/opp_probe/` and
+`/mnt/share_data_77/richard/AICUP2026_GO/opp_probe/` on the research machine.
+
+The v4-only scripts and every follow-up probe in this record (simulated
+questions, game result, stylistic neighbours, pool overlap, order, kNN,
+balanced decoding, duplicate players, exact overlap, shared opponents) are
+archived outside Git in `production/rank_opponent_identity_20261114/scripts/`
+and `production/research_scripts_20261116/`, not at the repository's lint
+standard.

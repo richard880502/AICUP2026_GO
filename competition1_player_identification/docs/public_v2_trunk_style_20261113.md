@@ -276,6 +276,107 @@ Official gain on the new Public pool over the v4 cosine: +0.042 against
 and `submission_style_v5_match` (sha256 `9cc83716...`) under
 `production/trunk_style_20261113/`.
 
+## Original pools with move matching (v6): Public 0.8819787
+
+Reported by the user on 2026-11-14. Only the 800 original-pool answers
+changed (`original_match.py`); the new pools keep the v5 answers.
+
+The original pools have 400 candidates with 100 reference games each. For
+validation every candidate's last 5 games are held out and asked as 1, 2, 3
+and 5-game questions against the other 95 games (harder than the official
+5-20-game questions, so methods can be told apart). The same v4 encoder,
+untrained move matching and CSLS as on the new pools:
+
+| Original pools, held-out mean of pub and priv | Score |
+| --- | ---: |
+| All-moves cosine | 0.893 |
+| + CSLS | 0.908 |
+| + move matching (weight 0.5) + CSLS | 0.948 |
+| **+ move matching (weight 1.0) + CSLS** | **0.956** |
+
+Official gain +0.0019 over v5: the original pools were already close to
+full marks, and 398 of 400 public top-1 answers stayed the same. File:
+`submission_style_v6_orig` (sha256 `0b80c9dc...`).
+
+## Richer tokens (v7) and the v4 + v7 score sum (v9): Public 0.8961831
+
+Reported by the user on 2026-11-15. v9 is the final style submission.
+
+v7 keeps the v4 recipe and changes only what each move token contains
+(`extract_rich.py`, 960-D instead of 384-D at the played point):
+
+| Part | Source in the frozen HumanSL b18c384 network | Width |
+| --- | --- | ---: |
+| A | Final trunk activation at the played point | 384 |
+| B | Mean of the final trunk over the 3x3 neighbourhood | 192 (PCA) |
+| C | Residual block 12 at the played point | 192 (PCA) |
+| D | Residual block 6 at the played point | 192 (PCA) |
+
+PCA is fitted once on a sample of training games. The 248k-game corpus at 960-D does
+not fit in RAM, so training reads a disk-backed memory map (`rich_full.py`).
+The validation cohort selects epoch 10 (v4: epoch 18).
+
+New-pool protocol of the previous section, cosine + both matchings, no CSLS:
+
+| Encoder | Validation | Final cohort |
+| --- | ---: | ---: |
+| v4 | 0.788 | 0.799 |
+| v7 | 0.782 | 0.798 |
+| v4 + v7, game-vector cosine only | 0.783 | 0.791 |
+| **v4 + v7, all six standardized scores** | **0.799** | **0.820** |
+
+v7 alone is no better than v4, but the two make different mistakes: the
+sum gains +0.011 / +0.021.
+With CSLS in the official-like protocol: validation 0.811 (v4) -> 0.819,
+final 0.823 -> 0.847. v9 (`ensemble_v9.py`) sums the three standardized
+scores of each encoder (cosine, untrained matching, fine-tuned matching;
+weights 1 : 0.5 : 0.5) and applies CSLS per pool. 10.4% of the new-pool
+top-1 answers changed against v6; the original pools keep the v6 answers.
+
+| Submission | Public | Change |
+| --- | ---: | ---: |
+| v6 (v4 only) | 0.8819787 | - |
+| **v9 (v4 + v7)** | **0.8961831** | **+0.0142** |
+
+File: `submission_style_v9_ens` (sha256 `ee527fe2...`).
+
+## Retraining on every labelled player (v11-v13): negative
+
+Before v9 the 1,200 validation and final-cohort players were kept out of
+training to choose epochs and fusion weights. These retrains add them
+(8,007 classes) and reuse every setting chosen before:
+
+| Submission | Encoders | Epoch | Public |
+| --- | --- | --- | ---: |
+| **v9 (reference)** | **v4 + v7** | **18 / 10** | **0.8961831** |
+| v11 | v8 + v10 (v4 and v7 recipes, all players) | 30 / 30 | 0.8921805 |
+| v12 | v8b + v10b (same, fixed epochs) | 18 / 10 | 0.8832612 |
+| v13 | v4 + v7 + v8b + v10b | mixed | 0.8905529 |
+
+v12 with the epochs chosen earlier did worse than v11 at epoch 30, so
+over-training does not explain the drop. Each retrain changes about 14% of
+the new-pool top-1 answers, so the Public score moves by about ±0.01 from
+retraining alone. 17% more players is too small a gain to show through
+that noise, and choosing the best of several retrains would overfit Public.
+The final style submission stays v9.
+
+## Self-play KataGo trunk instead of HumanSL: negative
+
+The same extraction (`--local-only`) with the self-play KataGo
+`kata1-b18c384nbt-s9996604416-d4316597426` checkpoint replacing HumanSL,
+on a 109k-game pilot corpus with the v4 recipe. Cohort cosine only:
+
+| Encoder (109k-game pilot) | Validation | Final cohort |
+| --- | ---: | ---: |
+| HumanSL 384-D (v4 tokens) | 0.712 | 0.727 |
+| HumanSL 960-D (v7 tokens) | 0.721 | 0.729 |
+| Self-play KataGo | 0.642 | 0.649 |
+| HumanSL 384-D + 960-D | 0.744 | 0.755 |
+| All three | 0.739 | 0.755 |
+
+The network trained to imitate human players carries more style than the
+stronger self-play network, which adds nothing to the HumanSL pair.
+
 ## How to reproduce
 
 All commands run from the repository root with
@@ -303,3 +404,25 @@ files above byte for byte from the saved checkpoints.
 
 `rerank_apply` and `matching_apply pools` take `--output` to write the
 submission elsewhere.
+
+v6, v7 and v9 (the final style submission) continue from there:
+
+10. `submission_style_v6_orig`: `python -m $M.original_match`
+11. 960-D tokens: `python -m $M.extract_rich fit ...` once (writes
+    `rich_pca.npz`), then `python -m $M.extract_rich run --games <csv>
+    --output <dir> --samples 160` for both training corpora, the cohorts and
+    the four pools. The exact fit sample and the run order were not kept in
+    the repository; they are in `rich_gpu0.sh` and `rich_gpu1.sh` of the
+    script archive below.
+12. `style_v7`: `python -m $M.rich_full` (disk-backed, about 2 minutes per
+    epoch on one RTX 3090; epoch 10 is selected).
+13. v7 matching: `python -m $M.rich_pipeline cohorts`, then `probe`, `match`,
+    `validation`, `pools` (writes `rerank_v7/` and `submission_style_v7_match`).
+14. `submission_style_v9_ens`: `python -m $M.ensemble_v9`
+
+The negative experiments (all-player retrains v8/v10/v8b/v10b and the
+v11-v13 ensembles, self-play KataGo tokens) were run from ad-hoc scripts
+that are archived outside Git in `production/research_scripts_20261116/`
+(`v8_pipeline.py`, `v10_pipeline.py`, `stop_patch.py`, `ens_final.py`,
+`ens_v12.py`, `ens_v13.py`, `extract_selfplay.py`, `train_sp.py`,
+`pilot_ens.py`). They are not at the repository's lint standard.

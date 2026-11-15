@@ -14,9 +14,10 @@ their scores must not be compared as if they were the same task.
 These are offline proxy/holdout results under different protocols, not
 official leaderboard submissions.
 
-Competition 1's v2 **Public best is 0.8819787** (2026-11-14, per-move HumanSL
-trunk style encoder plus move-to-move matching on all four pools; 0.8801077
-with matching on the new pools only; see
+Competition 1's v2 **Public best is 0.8961831** (2026-11-15, final: the scores
+of two per-move HumanSL trunk style encoders, 384-D and 960-D tokens, summed
+on the new pools; 0.8819787 with the 384-D encoder alone and move-to-move
+matching on all four pools, 0.8801077 with matching on the new pools only; see
 [the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
 Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
 methods on all four pools (see
@@ -27,8 +28,9 @@ submission's 0.4650701 (+0.0585901). The v2 score averages original and new
 Public questions and is not comparable to the historical 0.923040 proxy.
 See the [official submission record](competition1_player_identification/docs/public_v2_20261111.md).
 
-Competition 2's **Public best is 0.7586411** (2026-11-14, opponent identity
-added to the previous pipeline; see
+Competition 2's **Public best is 0.7599623** (2026-11-15, final: opponent
+identity from two style encoders added to the previous pipeline; 0.7586411
+with one encoder on 2026-11-14; see
 [the record](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md)).
 The 2026-11-06 submission received 0.7227214 Public,
 reported by the user. Its Private score is not yet available. The exact
@@ -38,7 +40,13 @@ submission record is in
 The initial static-analysis baseline and known legacy debt are recorded in
 [`QUALITY.md`](QUALITY.md).
 
-## Current best architecture: player identification (Public 0.8801077)
+## Current best architecture: player identification (Public 0.8961831)
+
+The diagrams show one encoder (Public 0.8801077 / 0.8819787). The final
+submission runs the same new-pool pipeline twice, with 384-D and with
+960-D move tokens (trunk at the played point, its 3x3 neighbourhood and
+residual blocks 12 and 6), and sums the six standardized scores before
+CSLS; the original pools keep the single-encoder answers.
 
 The submission answers the two kinds of pools with different pipelines,
 because the reference library per candidate differs tenfold (100 games
@@ -139,6 +147,18 @@ confirmed in a pre-registered 2,000-player cross-fitted test.
 Read
 [`competition2_rank_prediction/CURRENT_BEST.md`](competition2_rank_prediction/CURRENT_BEST.md)
 for the authoritative score and locked evaluation protocol.
+
+## External models used (for the final report)
+
+The official Q&A requires every external model to be disclosed with its
+source, version, license, use and an ablation. No external dataset is used;
+all training data is the official competition data.
+
+| Model | Source and version | License as checked on 2026-11-16 | Used for | Ablation |
+| --- | --- | --- | --- | --- |
+| KataGo engine | [lightvector/KataGo](https://github.com/lightvector/KataGo) v1.18.2, git `fd0723fd` | MIT (repository `LICENSE`) | Runs both networks below to produce the per-move engine scalars | - |
+| KataGo network `kata1-b18c384nbt-s9996604416-d4316597426` | [katagotraining.org](https://katagotraining.org/), `.bin.gz` SHA256 `9d7a6afe...`; PyTorch `.zip` SHA256 `72a5bc35...` | KataGo Neural Network License (MIT-style, [network license](https://katagotraining.org/network_license/)) | Engine scalars (policy surprisal and rank, win rate, score lead, ownership change) in both competitions. The PyTorch checkpoint was used only in the self-play trunk experiment, which is not in any submission | Self-play trunk tokens instead of HumanSL: Competition 1 cohort 0.642 against 0.712 ([record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)) |
+| HumanSL network `b18c384nbt-humanv0` | [KataGo v1.15.0 release](https://github.com/lightvector/KataGo/releases/tag/v1.15.0), `.bin.gz` SHA256 `637746e4...` and `.ckpt` (323,752,318 bytes) | No license text is attached to the release asset; the repository is MIT and the published networks use the MIT-style license above. Confirm with the organisers if the report needs an explicit statement | Frozen, never fine-tuned. Competition 1: trunk activations at the played point (384-D, and 960-D for v7) as move tokens. Competition 2: move likelihood under rank profiles in C1+C2 | Competition 1 before trunk tokens (engine summaries only): best Public 0.5640548; first trunk-token version 0.7187986 ([record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)) |
 
 ## Repository policy
 

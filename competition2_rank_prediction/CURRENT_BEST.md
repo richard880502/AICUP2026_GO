@@ -1,5 +1,13 @@
 # Competition 2 current best
 
+## Official Public result, 2026-11-15 (final)
+
+**0.7599623**: the C1+C2 pipeline below, multiplied with evidence from the
+registered ranks of recognised opponents (two style encoders from
+Competition 1, averaged). 0.7586411 with one encoder on 2026-11-14. See
+[the opponent identity record](experiments/opponent_identity/RESULTS.md).
+The sections below describe the C1+C2 pipeline (0.7227214).
+
 ## Official Public result, 2026-11-06
 
 The user reports a Public score of **0.7227214** for the 2026-10-30 test
