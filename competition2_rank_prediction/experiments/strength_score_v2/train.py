@@ -14,6 +14,7 @@ from sklearn.metrics import roc_auc_score
 
 from competition2_rank_prediction import rank_lib
 from competition2_rank_prediction.experiments.strength_score_v2.model import (
+    DISTANCE_WEIGHTINGS,
     StrengthScoreNetwork,
     relative_strength_loss,
 )
@@ -344,6 +345,15 @@ def main() -> None:
     parser.add_argument("--consistency-weight", type=float, default=0.10)
     parser.add_argument("--scale-weight", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=20261117)
+    parser.add_argument(
+        "--distance-weighting",
+        choices=DISTANCE_WEIGHTINGS,
+        default="forward",
+        help=(
+            "Pair weighting in the ranking loss. 'forward' (default) favours "
+            "distant ranks; the others test adjacent-boundary supervision."
+        ),
+    )
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -412,6 +422,7 @@ def main() -> None:
                     args.temperature,
                     args.consistency_weight,
                     args.scale_weight,
+                    args.distance_weighting,
                 )
             optimizer.zero_grad(set_to_none=True)
             terms.total.backward()

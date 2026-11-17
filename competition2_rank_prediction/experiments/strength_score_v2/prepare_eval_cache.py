@@ -120,8 +120,7 @@ def main() -> None:
         "moves_per_game": args.moves_per_game,
     }
     (args.output / "report.json").write_text(
-        json.dumps(report, indent=2) + "
-", encoding="utf-8"
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, indent=2), flush=True)
 

@@ -63,6 +63,9 @@ class LossTerms:
     scale: torch.Tensor
 
 
+DISTANCE_WEIGHTINGS = ("forward", "uniform", "inverse", "adjacent")
+
+
 def relative_strength_loss(
     player_scores: torch.Tensor,
     game_scores: torch.Tensor,
@@ -70,15 +73,25 @@ def relative_strength_loss(
     temperature: float = 1.0,
     consistency_weight: float = 0.10,
     scale_weight: float = 1e-3,
+    distance_weighting: str = "forward",
 ) -> LossTerms:
     """Bradley-Terry style ranking loss plus within-player consistency.
 
-    Larger rank indices are stronger. Pairs farther apart in registered rank
-    receive more weight, so ambiguous adjacent boundaries (notably A/1D) are
-    not forced apart as aggressively as distant ranks.
+    Larger rank indices are stronger. Under the default "forward" weighting,
+    pairs farther apart in registered rank receive more weight, so ambiguous
+    adjacent boundaries (notably A/1D) are not forced apart as aggressively as
+    distant ranks.
+
+    The remaining holdout3 error is almost entirely adjacent-rank, so the other
+    weightings exist to test whether that default trains the scalar away from
+    the only boundaries still worth winning: "uniform" weights every unequal
+    pair alike, "inverse" prefers near pairs, and "adjacent" supervises only
+    one-rank pairs.
     """
     if temperature <= 0:
         raise ValueError("temperature must be positive")
+    if distance_weighting not in DISTANCE_WEIGHTINGS:
+        raise ValueError(f"unknown distance weighting: {distance_weighting}")
     gap = labels[:, None] - labels[None, :]
     pair_mask = (gap != 0) & torch.triu(
         torch.ones_like(gap, dtype=torch.bool), diagonal=1
@@ -87,7 +100,15 @@ def relative_strength_loss(
         raise ValueError("batch contains no unequal-rank pairs")
     direction = gap.sign().to(player_scores.dtype)
     margin = direction * (player_scores[:, None] - player_scores[None, :])
-    distance_weight = gap.abs().clamp(max=3).to(player_scores.dtype) / 3.0
+    distance = gap.abs().clamp(max=3).to(player_scores.dtype)
+    if distance_weighting == "forward":
+        distance_weight = distance / 3.0
+    elif distance_weighting == "uniform":
+        distance_weight = torch.ones_like(distance)
+    elif distance_weighting == "inverse":
+        distance_weight = 1.0 / distance
+    else:
+        distance_weight = (gap.abs() == 1).to(player_scores.dtype)
     per_pair = F.softplus(-margin / temperature)
     weights = distance_weight[pair_mask]
     pairwise = (
