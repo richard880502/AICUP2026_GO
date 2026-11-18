@@ -71,7 +71,9 @@ def fit_baseline(
     return model
 
 
-def new_parameter_names(use_handicap: bool, use_context: bool) -> set[str]:
+def new_parameter_names(
+    use_handicap: bool, use_context: bool, handicap_mode: str = "global"
+) -> set[str]:
     """Parameter names introduced by the requested ablation."""
     names: set[str] = set()
     if use_handicap:
@@ -84,6 +86,8 @@ def new_parameter_names(use_handicap: bool, use_context: bool) -> set[str]:
                 "hd_gate_raw",
             }
         )
+        if handicap_mode == "decay":
+            names.add("hd_decay_raw")
     if use_context:
         names.add("context_head.weight")
     return names
@@ -99,9 +103,10 @@ def fit_new_parameters(
     context_l2: float,
     use_handicap: bool,
     use_context: bool,
+    handicap_mode: str = "global",
 ) -> RankContextModel:
     """Fits only newly added parameters, keeping the v47 fit frozen."""
-    trainable = new_parameter_names(use_handicap, use_context)
+    trainable = new_parameter_names(use_handicap, use_context, handicap_mode)
     parameters = []
     for name, parameter in model.named_parameters():
         parameter.requires_grad_(name in trainable)
@@ -366,9 +371,20 @@ def main() -> None:  # pylint: disable=too-many-locals
 
     gain = GAIN.to(device)
     variants = {
-        "handicap": (True, False),
-        "context": (False, True),
-        "both": (True, True),
+        "handicap": (True, False, "global"),
+        "context": (False, True, "global"),
+        "both": (True, True, "global"),
+        # The global gate helps only where HD>=2 is the sole evidence and
+        # dilutes the sharper even-game evidence everywhere else, so these two
+        # condition the branch on how much ordinary evidence the question has.
+        "handicap_alone": (True, False, "alone"),
+        "handicap_decay": (True, False, "decay"),
+        # Fitting under "alone" starves the transition: the branch then only
+        # touches ~7 questions per training half, far too few for its nine
+        # parameters. The transition is a property of the matchmaking system,
+        # so estimate it from all HD>=2 games and restrict only where the
+        # evidence is applied.
+        "handicap_fit_global_apply_alone": (True, False, "fit_global_apply_alone"),
     }
     baseline_probability = torch.zeros(
         len(truth), 10, device=device
@@ -405,12 +421,15 @@ def main() -> None:  # pylint: disable=too-many-locals
                 *arguments
             ).softmax(1)[test_mask]
 
-        for name, (use_handicap, use_context) in variants.items():
+        for name, (use_handicap, use_context, handicap_mode) in variants.items():
+            split_fit = handicap_mode == "fit_global_apply_alone"
+            fit_mode = "global" if split_fit else handicap_mode
             model = RankContextModel(
                 ranks,
                 context_tensor.shape[1],
                 use_handicap=use_handicap,
                 use_context=use_context,
+                handicap_mode=fit_mode,
             ).to(device)
             model.load_state_dict(baseline_state, strict=False)
             model = fit_new_parameters(
@@ -423,7 +442,10 @@ def main() -> None:  # pylint: disable=too-many-locals
                 args.context_l2,
                 use_handicap,
                 use_context,
+                fit_mode,
             )
+            if split_fit:
+                model.handicap_mode = "alone"
             with torch.no_grad():
                 variant_probability[name][test_mask] = model(
                     *arguments

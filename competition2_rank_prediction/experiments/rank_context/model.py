@@ -7,6 +7,12 @@ import math
 import torch
 import torch.nn.functional as F
 
+# How HD>=2 evidence is weighted once it is no longer discarded.
+# "global"  one learned gate per side, applied to every HD>=2 game;
+# "alone"   applied only in questions that have no HD0/HD1 game at all;
+# "decay"   divided by 1 + softplus(d) * (ordinary games in the question).
+HANDICAP_MODES = ("global", "alone", "decay")
+
 
 def inverse_softplus(value: float) -> float:
     """Stable inverse of softplus for positive initialization targets."""
@@ -32,11 +38,15 @@ class RankContextModel(torch.nn.Module):  # pylint: disable=too-many-instance-at
         context_dimensions: int,
         use_handicap: bool,
         use_context: bool,
+        handicap_mode: str = "global",
     ) -> None:
         super().__init__()
+        if handicap_mode not in HANDICAP_MODES:
+            raise ValueError(f"unknown handicap mode: {handicap_mode}")
         self.ranks = ranks
         self.use_handicap = use_handicap
         self.use_context = use_context
+        self.handicap_mode = handicap_mode
 
         # Exact v47 parameters/initialization.
         self.log_temperature = torch.nn.Parameter(
@@ -88,6 +98,12 @@ class RankContextModel(torch.nn.Module):  # pylint: disable=too-many-instance-at
         )
         self.hd_unknown = torch.nn.Parameter(
             torch.full((2,), -1.0, device=ranks.device)
+        )
+        # Scarcity decay: HD>=2 evidence is wide (learned sigma near 2 ranks),
+        # so multiplying it in beside sharp even-game evidence dilutes the
+        # latter. Zero init reproduces the "global" mode exactly.
+        self.hd_decay_raw = torch.nn.Parameter(
+            torch.zeros((), device=ranks.device)
         )
         self.hd_gate_raw = torch.nn.Parameter(
             torch.zeros(2, device=ranks.device)
@@ -182,9 +198,26 @@ class RankContextModel(torch.nn.Module):  # pylint: disable=too-many-instance-at
                 hd_transition,
                 transition,
             )
+            hd_weight = hd_gate.to(base.dtype)
+            if self.handicap_mode != "global":
+                ordinary_games = torch.zeros(
+                    questions, device=base.device, dtype=base.dtype
+                ).index_add_(
+                    0, game_question, (kind < 3).to(base.dtype)
+                )[game_question]
+                if self.handicap_mode == "alone":
+                    # Only speak where nothing else does: questions whose every
+                    # game is HD>=2 currently receive no opponent evidence at
+                    # all. Every other question keeps exact v47 behaviour.
+                    hd_weight = hd_weight * (ordinary_games == 0).to(base.dtype)
+                else:
+                    hd_weight = hd_weight / (
+                        1.0
+                        + F.softplus(self.hd_decay_raw) * ordinary_games
+                    )
             game_weight = torch.where(
                 hd_mask,
-                hd_gate.to(base.dtype),
+                hd_weight,
                 torch.ones_like(game_weight),
             )
 
@@ -261,4 +294,9 @@ class RankContextModel(torch.nn.Module):  # pylint: disable=too-many-instance-at
                     self.hd_unknown
                 ).detach().cpu()
             ]
+            output["handicap_mode"] = self.handicap_mode
+            if self.handicap_mode == "decay":
+                output["hd_decay"] = float(
+                    F.softplus(self.hd_decay_raw).detach().cpu()
+                )
         return output

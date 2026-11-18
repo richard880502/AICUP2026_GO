@@ -37,10 +37,40 @@ FEATURE_NAMES = (
 )
 
 
+RANKS = ("D", "C", "B", "A", "1D", "2D", "3D", "4D", "5D", "6D")
+
+
 def handicap_of(sgf: str) -> int:
     """Returns SGF HD, defaulting to zero when the property is absent."""
     match = re.search(r"HD\[(\d+)\]", sgf or "")
     return int(match.group(1)) if match else 0
+
+
+def handicap_by_game(data_root: pathlib.Path, map_path: pathlib.Path) -> dict[str, int]:
+    """Maps holdout3 game id to its exact SGF handicap.
+
+    The SGFs inside the holdout3 question CSVs are stripped to `SZ` plus the
+    move sequence, so they carry no `HD` property and cannot be the source.
+    v47 took the handicap from the authorized training CSVs instead, keyed by
+    the global row index in `h3_map.npz`; this reproduces that exact path (see
+    `experiments/opponent_identity/h3_dump.py`).
+    """
+    with np.load(map_path) as saved:
+        # pylint: disable-next=no-member  # NpzFile arrays; pylint infers np.array.
+        row_of_game = dict(zip(saved["game_key"].tolist(), saved["row"].tolist()))
+    wanted = set(row_of_game.values())
+    handicap_of_row: dict[int, int] = {}
+    for index, rank in enumerate(RANKS):
+        path = data_root / f"train_{rank}.csv"
+        with path.open(encoding="utf-8", newline="") as source:
+            for position, row in enumerate(csv.DictReader(source)):
+                key = index * 100000 + position
+                if key in wanted:
+                    handicap_of_row[key] = handicap_of(row["sgf_content"])
+    missing = wanted - set(handicap_of_row)
+    if missing:
+        raise ValueError(f"{len(missing)} mapped rows absent from the training CSVs")
+    return {game: handicap_of_row[row] for game, row in row_of_game.items()}
 
 
 def load_test_games(root: pathlib.Path) -> dict[tuple[str, int], dict]:
@@ -116,7 +146,7 @@ def question_features(
     return result
 
 
-def main() -> None:
+def main() -> None:  # pylint: disable=too-many-statements
     """Writes exact per-game context and question-level structural features."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -141,6 +171,20 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--h3-map",
+        type=pathlib.Path,
+        default=pathlib.Path(
+            "/tmp2/richard/claude_scratch/rank_probe/h3_map.npz"
+        ),
+        help="game_key -> training row index, as used by h3_dump.py",
+    )
+    parser.add_argument(
+        "--data-root",
+        type=pathlib.Path,
+        default=pathlib.Path("data/training"),
+        help="directory holding train_<rank>.csv with HD in sgf_content",
+    )
+    parser.add_argument(
         "--output",
         type=pathlib.Path,
         default=pathlib.Path(
@@ -154,6 +198,7 @@ def main() -> None:
     game_question = np.asarray(state["game_question"], dtype=np.int64)
     order = np.asarray(state["order"]).astype(str)
     tests = load_test_games(args.holdout_root)
+    handicap_of_game = handicap_by_game(args.data_root, args.h3_map)
 
     with args.h3_opp.open(encoding="utf-8", newline="") as source:
         opponent_rows = list(csv.DictReader(source))
@@ -184,7 +229,7 @@ def main() -> None:
                 f"color mismatch for {row['game_id']}: "
                 f"opponent={opponent_color}, own={own_color}"
             )
-        handicap[row_index] = handicap_of(info["sgf"])
+        handicap[row_index] = handicap_of_game[row["game_id"]]
         own_black[row_index] = own_color == "B"
         game_id.append(row["game_id"])
 
