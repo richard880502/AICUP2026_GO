@@ -15,6 +15,8 @@ CONTEXT=${CONTEXT:-runtime/competition2_research/experiments/rank_context/holdou
 export PYTHONPATH=".:competition1_player_identification"
 export CUDA_VISIBLE_DEVICES="$GPU"
 
+"$PY" -m competition2_rank_prediction.experiments.rank_context.smoke_test
+
 "$PY" -m competition2_rank_prediction.experiments.rank_context.build_context   --state "$STATE"   --h3-opp "$H3_OPP"   --holdout-root "$HOLDOUT_ROOT"   --output "$CONTEXT"
 
 "$PY" -m competition2_rank_prediction.experiments.rank_context.run   --state "$STATE"   --context "$CONTEXT"   --device "$DEVICE"
