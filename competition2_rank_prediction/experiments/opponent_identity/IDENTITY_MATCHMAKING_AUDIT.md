@@ -4,6 +4,78 @@ Branch: audit/identity-matchmaking-graph
 
 This is deliberately an audit first, not a model.
 
+## Result (2026-11-18): stop at P0-A — no game is stored twice
+
+**The exact graph cannot be built, and P0-B never becomes measurable.** Every
+one of the 1,000,000 training rows has a distinct canonical digest:
+
+```text
+rows                                 1,000,000
+unique_canonical_games               1,000,000
+duplicate_hash_groups                        0
+two_player_opposite_color_groups             0
+accepted_exact_edges                         0
+graph coverage, 8,007 labelled players    0.0
+graph coverage, 6,807 v47 classes         0.0
+```
+
+The audit's own stop condition ("stop immediately if v47 class graph coverage
+is small") fires at zero coverage, so no split-half correlation exists to
+compare against the 0.15 / 0.30 / 0.40 gates.
+
+### This is the dataset, not a bug
+
+Two checks rule out an extraction artifact.
+
+The digest is player-independent by construction. `open_set_v2/cache.py`
+builds `canonical` from the setup properties and the `B`/`W` move coordinates
+only — no player id, rank, colour label or metadata enters it, so the same
+physical game would hash identically from either side.
+
+A truncation artifact would hide duplicates behind differing digests, so games
+were also compared by move prefix:
+
+| Rows sharing this prefix with another row | Count |
+| --- | ---: |
+| first 40 moves | 392 |
+| first 80 moves | 32 |
+| first 120 moves | 8 |
+
+If each physical game were stored once per player, roughly 500,000 rows would
+share long prefixes. Eight rows at 120 moves is opening coincidence, not paired
+storage. The corpus is 1,000,000 distinct games, exactly 100,000 per rank, each
+attributed to one labelled player.
+
+### A warning for the inferred-graph version
+
+The obvious salvage is to replace the exact graph with one inferred from the
+style encoder, which does identify training-game opponents reasonably often
+(0.93-0.95 known share). **The split-half test would then stop being a valid
+check.** It controls for repeated games against the same neighbour, but not for
+correlated identification error: a player whose opponents are mis-attributed
+toward the same hub classes gets the same bias in both halves, so `delta_A` and
+`delta_B` would agree for a reason that has nothing to do with matchmaking.
+Hubness of exactly this kind is already recorded — it is why CSLS *hurt* in
+[TIER_A_RESULTS.md](TIER_A_RESULTS.md), and a related contamination appears in
+[SHARED_OPPONENT_AUDIT.md](SHARED_OPPONENT_AUDIT.md), where same-question
+opponent pairs average 0.1795 against 0.0296 for cross-question pairs.
+
+An inferred-graph retry would need a different reliability control — for
+example splitting by identification confidence, or a permutation null over
+attributed neighbours — before any split-half number could be believed.
+
+### Fix applied
+
+`load_rows` rejected the corpus with "encoded row convention assumes <100000"
+because rank D has exactly 100,000 rows. Positions run 0..99,999, so a rank
+block of exactly 100,000 still fits without colliding with the next rank; the
+guard is now `> 100000`. This is the same `rank_index * 100000 + position`
+convention `h3_dump.py` already uses on this corpus.
+
+---
+
+Protocol as locked before the run:
+
 The question is: among players with the same registered rank, does opponent identity carry a persistent matchmaking-position offset that is stable across different neighbours?
 
 If not, do not build the proposed identity-conditioned v47 or a graph model.

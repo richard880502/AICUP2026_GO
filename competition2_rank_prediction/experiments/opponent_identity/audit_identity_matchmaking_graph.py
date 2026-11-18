@@ -55,9 +55,11 @@ def load_rows(root: pathlib.Path) -> dict:
             h = as_bytes(np.asarray(shard["hashes"]), 64)
             p = as_bytes(np.asarray(shard["players"]), 128)
             c = np.asarray(shard["colors"], dtype=np.int8)
-        if len(h) >= 100000:
+        # Positions run 0..len-1, so exactly 100000 rows still fit in the block
+        # this rank owns; the same convention is used by h3_dump.py.
+        if len(h) > 100000:
             raise ValueError(
-                f"{rank} has {len(h)} rows; encoded row convention assumes <100000"
+                f"{rank} has {len(h)} rows; encoded row convention assumes <=100000"
             )
         hashes.append(h)
         players.append(p)
@@ -170,7 +172,7 @@ def degree_summary(players: list[str], neighbours: dict[str, set[str]]) -> dict:
     """Coverage and degree distribution for a fixed player population."""
     degree = np.asarray([len(neighbours.get(player, set())) for player in players])
     covered = degree > 0
-    if not len(degree):
+    if not degree.size:
         return {"players": 0}
     return {
         "players": int(len(degree)),
@@ -198,10 +200,10 @@ def class_players(rows: dict) -> list[str]:
     for owner, position in zip(np.asarray(owners), np.asarray(class_rows)):
         key = int(selected[int(position)])
         rank_index, row = divmod(key, 100000)
-        if not (0 <= rank_index < len(RANKS)):
+        if not 0 <= rank_index < len(RANKS):
             raise ValueError(f"invalid encoded gallery row {key}")
         shard = rows["player_shards"][rank_index]
-        if not (0 <= row < len(shard)):
+        if not 0 <= row < len(shard):
             raise ValueError(f"gallery row {key} outside raw cache")
         player = bytes(shard[row]).decode()
         previous = output[int(owner)]
@@ -265,7 +267,8 @@ def residual_audit(
 
     half_delta: dict[str, tuple[float, float, int, int]] = {}
     for player in players:
-        left, right = [], []
+        left: list[int] = []
+        right: list[int] = []
         for neighbour in neighbours.get(player, set()):
             if neighbour not in player_rank:
                 continue
@@ -280,7 +283,7 @@ def residual_audit(
                 len(right),
             )
 
-    thresholds = {}
+    thresholds: dict[str, dict] = {}
     for minimum_half in (1, 2, 3, 5):
         selected = [
             value for value in half_delta.values()
