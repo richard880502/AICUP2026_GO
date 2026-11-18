@@ -476,16 +476,24 @@ def summarize_gate(report: dict, primary_threshold: float) -> dict:
     utility_deltas = []
     positive_all = True
     class_counts = []
+    significant_checks = 0
+    total_checks = 0
     for direction in ("v4_to_v7", "v7_to_v4"):
         for fold in report[direction]["folds"]:
             item = fold["by_mass_threshold"][key]
-            observed = item["cross_encoder_class_stability"]["observed"]
+            stability = item["cross_encoder_class_stability"]
+            observed = stability["observed"]
             spearman = observed["spearman"]
             pearson = observed["pearson"]
-            class_counts.append(item["cross_encoder_class_stability"]["classes"])
-            if spearman is not None:
-                correlations.append(max(float(spearman), float(pearson or -1.0)))
-                positive_all &= float(spearman) > 0 and float(pearson or 0.0) > 0
+            class_counts.append(stability["classes"])
+            total_checks += 1
+            if spearman is not None and pearson is not None:
+                correlations.append(0.5 * (float(spearman) + float(pearson)))
+                positive_all &= float(spearman) > 0 and float(pearson) > 0
+                significant_checks += int(
+                    stability.get("pearson_one_sided_p", 1.0) < 0.05
+                    and stability.get("spearman_one_sided_p", 1.0) < 0.05
+                )
             else:
                 positive_all = False
             utility_deltas.append(item["heldout_prediction"]["utility_delta"])
@@ -503,6 +511,7 @@ def summarize_gate(report: dict, primary_threshold: float) -> dict:
         and min(class_counts, default=0) >= 50
         and positive_all
         and mean_corr >= 0.25
+        and significant_checks >= 3
         and mean_utility >= 0.003
         and (coverage is None or coverage >= 0.25)
     )
@@ -510,15 +519,18 @@ def summarize_gate(report: dict, primary_threshold: float) -> dict:
         "primary_mass_threshold": primary_threshold,
         "minimum_reliable_classes_across_checks": min(class_counts, default=0),
         "mean_cross_encoder_correlation": mean_corr,
+        "permutation_significant_checks": significant_checks,
+        "total_cross_encoder_checks": total_checks,
         "mean_rounded_utility_delta": mean_utility,
         "official_mean_posterior_mass_on_reliable_classes": coverage,
         "all_four_checks_nonnegative": positive_all,
         "passes_gate": pass_gate,
         "rule": (
-            ">=50 reliable classes, mean cross-encoder corr >=0.25, "
-            "mean rounded-utility delta >=+0.003, all four fold/direction "
-            "checks nonnegative, and official reliable posterior mass >=0.25 "
-            "when official caches are available."
+            ">=50 reliable classes, mean of Pearson/Spearman across the four "
+            "cross-encoder checks >=0.25, >=3/4 checks significant at p<0.05 "
+            "against the within-rank permutation null for BOTH correlations, "
+            "mean rounded-utility delta >=+0.003, no fold/direction negative, "
+            "and official reliable posterior mass >=0.25 when available."
         ),
     }
 
