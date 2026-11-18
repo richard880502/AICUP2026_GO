@@ -145,3 +145,156 @@ The earlier nearest-training-game probe was game-level: opponent embedding -> si
 This audit tests a persistent player-level latent variable: opponent identity j -> many distinct matchmaking neighbours -> stable delta_j.
 
 The experiment is intentionally easy to falsify before adding model capacity.
+
+
+---
+
+# Follow-up: cross-encoder identity residual audit
+
+The exact graph failed because the corpus does not store both sides of a
+physical game. The remaining hypothesis is narrower:
+
+> same-rank opponent identities may carry persistent registered-rank residual
+> information, but it must survive validation by a *different* identity
+> encoder.
+
+This follow-up stays on the same branch but uses a different reliability
+control from the failed exact-graph split.
+
+## Why cross-encoder
+
+A single style encoder can create false stability through hubness: the same
+classes may attract assignment error in both halves. Therefore the audit does
+not accept v4->v4 or v7->v7 self-consistency as evidence.
+
+Instead:
+
+```text
+v4 posterior on source-player half A
+    -> estimate per-class delta_j
+    -> validate class alignment + held-out residual with v7 on half B
+
+v7 posterior on source-player half A
+    -> estimate per-class delta_j
+    -> validate with v4 on half B
+```
+
+The direction is reversed and both source-player halves are used, giving four
+independent direction/fold checks.
+
+## Split rule
+
+The 6,144 sampled training games are split by **source player_id**, not by
+game. Every game of one labelled source player stays in the same half.
+
+This prevents one player's persistent own-rank behaviour from leaking into
+both estimation and validation halves.
+
+Only HD0/HD1 games enter the primary audit because the official test contains
+no HD>=2 games.
+
+## Soft identity assignment
+
+No top-1 hard identity is used. Each game contributes the complete class
+posterior:
+
+```text
+q_gj = softmax(cosine_gj / 0.04)
+```
+
+with the source player's own v47 class masked when applicable.
+
+For each encoder and training half:
+
+1. fit the low-capacity rank-only transition
+   `E[own rank | opponent registered rank, game kind]`;
+2. compute each game's residual around that transition;
+3. posterior-weight the residual into each opponent identity;
+4. shrink class residuals toward zero with denominator `mass + 2.0`.
+
+This produces `delta_j` in units of registered-rank residual.
+
+## Reliability control: within-rank permutation null
+
+For a class to count at a mass threshold it must have enough posterior mass in
+both the estimator and validator halves.
+
+Primary mass threshold: **2.0 effective games**.
+
+For every cross-encoder class-level correlation, opponent identities are
+randomly shuffled **within the same registered rank** 1,000 times. The
+observed identity alignment therefore has to beat a null that preserves:
+
+- registered rank;
+- number of classes per rank;
+- residual scale by rank.
+
+This is specifically designed to reject a result that is merely rank
+information restated through identity labels.
+
+## Held-out predictive check
+
+On the untouched source-player half, the validator encoder first makes the
+rank-only opponent prediction. The estimator encoder's frozen `delta_j` is
+then transported through the validator posterior:
+
+```text
+correction_g = sum_j q_validator(g,j) * delta_estimator(j)
+```
+
+The report measures:
+
+- correlation of this correction with the validator's held-out rank residual;
+- MAE before / after;
+- rounded contest-like utility before / after;
+- posterior mass landing on reliable identities.
+
+No scalar correction weight is tuned on the evaluation half; the residual is
+applied in its natural rank units.
+
+## Official coverage
+
+The official v4+v7 opponent posterior is read only to answer:
+
+> if the residual were real, how much of the official opponent posterior lands
+> on identities with enough training evidence?
+
+No official labels are used.
+
+## Predeclared gate
+
+At the primary mass threshold 2.0, proceed only if all are true:
+
+- at least 50 reliable identities in every direction/fold check;
+- mean of Pearson/Spearman over the four checks >= **0.25**;
+- at least **3 of 4** checks beat the within-rank permutation null at p<0.05
+  for both Pearson and Spearman;
+- mean held-out rounded-utility delta >= **+0.003**;
+- no direction/fold has negative correlation or negative utility delta;
+- official mean v47 posterior mass on reliable identities >= **0.25** when
+  official caches are available.
+
+Failing the gate closes the entire identity-specific matchmaking-residual
+route. Passing it justifies one small frozen-delta v47 experiment, not a GNN.
+
+## Run
+
+```bash
+git fetch origin
+git checkout audit/identity-matchmaking-graph
+
+GPU=1 \
+bash competition2_rank_prediction/experiments/opponent_identity/\
+run_cross_encoder_residual_audit.sh
+```
+
+The runner reuses token folders if present. Otherwise it extracts v4 local
+HumanSL tokens and v7 rich tokens for the existing 6,144-game
+`opp_sample.csv`.
+
+Primary output:
+
+```text
+runtime/competition2_research/experiments/
+  identity_matchmaking_graph/cross_encoder_report.json
+```
