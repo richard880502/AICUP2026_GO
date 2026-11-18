@@ -248,7 +248,11 @@ def add_extra_npz(
                 if key in reserved or key == "features":
                     continue
                 value = np.asarray(saved[key])
-                if not np.issubdtype(value.dtype, np.number) or len(value) != len(ids):
+                if (
+                    value.ndim == 0
+                    or not np.issubdtype(value.dtype, np.number)
+                    or len(value) != len(ids)
+                ):
                     continue
                 if value.ndim == 1:
                     aligned = np.full(len(order), np.nan, np.float64)
