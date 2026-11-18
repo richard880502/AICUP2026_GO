@@ -188,6 +188,26 @@ def main() -> None:
         own_black[row_index] = own_color == "B"
         game_id.append(row["game_id"])
 
+    # Reconstructed context must reproduce the coarse v47 kind exactly:
+    # 0 even, 1 HD1 opponent White (= own Black),
+    # 2 HD1 opponent Black (= own White), 3 HD>=2.
+    derived_kind = np.where(
+        handicap == 0,
+        0,
+        np.where(
+            handicap == 1,
+            np.where(own_black, 1, 2),
+            3,
+        ),
+    ).astype(np.int64)
+    cached_kind = np.asarray(state["kind"], dtype=np.int64)
+    if not np.array_equal(derived_kind, cached_kind):
+        mismatch = np.flatnonzero(derived_kind != cached_kind)
+        raise ValueError(
+            f"reconstructed handicap kind disagrees with v47 on "
+            f"{len(mismatch)} games; first rows {mismatch[:10].tolist()}"
+        )
+
     features = question_features(
         handicap, own_black, game_question, len(order)
     )
