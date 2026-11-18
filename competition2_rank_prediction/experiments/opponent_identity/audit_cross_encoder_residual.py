@@ -423,29 +423,37 @@ def cross_direction(
     return {"direction": name, "folds": folds}
 
 
-def official_coverage(
-    player_rank: np.ndarray,
-    training_probability4: np.ndarray,
-    training_probability7: np.ndarray,
-    official_scores: pathlib.Path,
-    official_v7: pathlib.Path,
-    mass_thresholds: tuple[float, ...],
-    temperature: float,
-) -> dict | None:
-    """Official posterior mass on classes with enough training evidence."""
-    if not official_scores.exists() or not official_v7.exists():
+def load_official_v4_sims(official_scores: pathlib.Path) -> np.ndarray | None:
+    """Official v4 class cosines; call before switching the global layout to v7."""
+    if not official_scores.exists():
         return None
-    # Full-sample mass is only a coverage statistic; no labels from official data.
-    mass4 = training_probability4.sum(0)
-    mass7 = training_probability7.sum(0)
-
     with np.load(official_scores) as saved:
         vectors = torch.from_numpy(saved["vectors"].astype(np.float32)).to(train.DEVICE)
     model4, _, _, _ = apply.load_model("style_v4")
     classes4 = F.normalize(model4.class_weights.detach().float(), dim=-1)  # pylint: disable=not-callable
     sims4 = (vectors @ classes4.T).half().cpu().numpy()
+    del model4, vectors, classes4
+    torch.cuda.empty_cache()
+    return sims4
+
+
+def official_coverage(
+    training_probability4: np.ndarray,
+    training_probability7: np.ndarray,
+    official_sims4: np.ndarray | None,
+    official_v7: pathlib.Path,
+    mass_thresholds: tuple[float, ...],
+    temperature: float,
+) -> dict | None:
+    """Official posterior mass on classes with enough training evidence."""
+    if official_sims4 is None or not official_v7.exists():
+        return None
+    # Full-sample mass is only a coverage statistic; no labels from official data.
+    mass4 = training_probability4.sum(0)
+    mass7 = training_probability7.sum(0)
+
     sims7 = np.load(official_v7)
-    combined = (sims4.astype(np.float32) + sims7.astype(np.float32)) / 2.0
+    combined = (official_sims4.astype(np.float32) + sims7.astype(np.float32)) / 2.0
     probability = posterior(combined.astype(np.float16), temperature)
 
     out = {}
@@ -458,8 +466,6 @@ def official_coverage(
             "games_mass_ge_0_25": float((per_game >= 0.25).mean()),
             "games_mass_ge_0_50": float((per_game >= 0.50).mean()),
         }
-    del model4, vectors, classes4
-    torch.cuda.empty_cache()
     return out
 
 
@@ -564,6 +570,8 @@ def main() -> None:  # pylint: disable=too-many-locals
 
     print("encoding v4 class similarities", flush=True)
     sims4 = encode_v4(args.v4_tokens, sample, own_class)
+    # Must happen before rich_full.use_rich() in encode_v7 changes the global layout.
+    official_sims4 = load_official_v4_sims(args.official_scores)
     print("encoding v7 class similarities", flush=True)
     sims7 = encode_v7(args.v7_tokens, sample, own_class)
 
@@ -607,10 +615,9 @@ def main() -> None:  # pylint: disable=too-many-locals
         args.permutations,
     )
     report["official_coverage"] = official_coverage(
-        player_rank,
         probability4,
         probability7,
-        args.official_scores,
+        official_sims4,
         args.official_v7,
         thresholds,
         args.temperature,
