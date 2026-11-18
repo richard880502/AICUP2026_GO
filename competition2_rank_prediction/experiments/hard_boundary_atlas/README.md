@@ -10,6 +10,128 @@ The goal is to answer:
 
 The atlas is intended to decide what to build next rather than trying another model blindly.
 
+## Result (2026-11-18): do not build a larger classifier on these inputs
+
+Run on the 2,000-question holdout3 cache: 52 features, 9 boundaries, 468 cells.
+v47 replays 0.7640 (exact 0.6465, off by one 0.3195, off by two or more 0.034).
+
+**Under a calibrated null and nonparametric conditioning, no officially
+available feature family separates the hardest boundary.** The screen's own
+instruction applies: no larger classifier on the same information. The one
+family the atlas cannot yet see — a multi-profile HumanSL likelihood — is being
+audited separately on the validation cohort.
+
+### Where v47 is actually weak now
+
+| Boundary | D/C | C/B | B/A | A/1D | **1D/2D** | 2D/3D | 3D/4D | 4D/5D | 5D/6D |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| v47 AUC | 0.908 | 0.913 | 0.919 | 0.834 | **0.777** | 0.836 | 0.865 | 0.921 | 0.906 |
+
+4D/5D is listed as historically difficult, but that was the strength-score era
+(`a1d_boundary` records 0.73). With opponent identity, v47 is at 0.921 there.
+The genuinely hard boundaries are now 1D/2D, A/1D and 2D/3D.
+
+### 1. The 0.58 cut is the noise ceiling of a family with no signal
+
+The conditional AUC is direction-free, `max(AUC, 1 - AUC)`, with the direction
+chosen on the evaluation data, then maximised over boundaries and over a
+family. `permutation_null.py` shuffles labels within fold while holding the
+label-free residuals fixed (2,000 draws), applying the same permutation to every
+feature so the family-wise maximum keeps feature correlation:
+
+| | Null q95 |
+| --- | ---: |
+| single cell, mean over 468 cells | 0.545 |
+| best feature within a family, per boundary | 0.565 - 0.579 |
+
+A family with no information reaches the 0.58 screen at its 95th percentile.
+The v47 family itself stays under its null at every boundary under the atlas's
+linear residual, which confirms the null is calibrated.
+
+### 2. Linear residualization manufactures most of the signal
+
+The atlas residualizes each feature on a straight line in the v47 boundary
+log-odds. A fold-safe nonparametric alternative — subtract the feature's mean
+within ten quantile bins of the same score, bins fitted on the opposite fold —
+removes dependence a line cannot:
+
+| | Linear | Binned |
+| --- | ---: | ---: |
+| cells with BH q < 0.10 | **50** | **13** |
+
+Thirty-eight of the 50 linear survivors do not survive binning; twelve do,
+and one cell (`base__entropy` @ D/C) appears only under binning.
+
+| Feature @ boundary | Linear AUC (q) | Binned AUC (q) |
+| --- | ---: | ---: |
+| `opponent__soft_rank_0_mass` @ 5D/6D | 0.739 (0.008) | 0.618 (0.047) |
+| `opponent__soft_rank_9_mass` @ D/C | 0.705 (0.008) | 0.626 (0.047) |
+| `structure__hd1_opp_white_fraction` @ B/A | 0.642 (0.008) | 0.543 (0.646) |
+| `structure__hd1_opp_white_fraction` @ A/1D | 0.614 (0.008) | 0.586 (0.117) |
+| `base__top_probability` @ C/B | 0.633 (0.008) | 0.552 (0.468) |
+| `structure__hd2plus_fraction` @ B/A | 0.744 (0.008) | 0.564 (0.308) |
+
+The features that collapse completely are the ones with *low* Spearman
+correlation to v47 (`hd1_opp_white_fraction` -0.19, `base__top_probability`
+0.10). Low rank correlation does not mean independence: their relationship to
+v47 is non-monotone, and a straight line leaves it in the residual.
+
+### 3. What survives is v47's own information at easy boundaries
+
+The 13 binned survivors are almost all `opponent__soft_rank_k_mass` at the
+extreme boundaries (D/C, 5D/6D, 2D/3D, B/A). They shrink by about 0.1 but do
+not vanish, and they should not be read as new information:
+
+- their Spearman correlation with v47 expected rank is about 0.9 — they are
+  v47's own opponent-rank posterior, in a direction orthogonal to one
+  boundary's log-odds;
+- binning is coarse (about 20 questions per bin), and the **v47 family itself
+  beats the binned null at D/C** (0.578 against 0.568), so some v47 leakage
+  remains at exactly the boundaries where these survive;
+- most matched-pair effects straddle zero.
+
+At most this suggests v47's decoding under-uses the tail of its own posterior
+on easy boundaries. It is not an independent source.
+
+### 4. The hardest boundary has nothing usable
+
+At 1D/2D the binned survivors are `opponent__soft_rank_0_mass` (0.581, q 0.052,
+matched effect 0.029 [-0.223, 0.316]) and `structure__hd2plus_fraction`, which
+cannot help the official test set (no HD>=2 game there). A/1D and 2D/3D are the
+same picture: only HD>=2 or a v47-redundant opponent mass clears the null.
+
+### Recommendations for future atlas runs
+
+1. Report the permutation null beside every conditional AUC; read 0.58 as
+   noise, not as "interesting".
+2. Prefer nonparametric residualization (`--residual binned`, or isotonic);
+   38 of the 50 cells significant under the linear residual disappear.
+3. Treat the matched-pair effect as confirmatory, since it conditions on v47
+   without assuming a functional form.
+4. Drop HD>=2 features from the candidate ranking automatically; they are a
+   holdout3-only diagnostic.
+
+### Fixes applied
+
+- `build_features.py`: the per-game opponent-rank variance used a matrix
+  product, `rank_prob @ (...)` on two `[batch, 10]` tensors. It failed for
+  batch 1024 and would have silently mixed games for a batch of exactly 10. It
+  is now the element-wise `sum_k p_k (k - mu)^2`.
+- `analyze.py`: `Axes.boxplot(labels=...)` was renamed `tick_labels` in
+  matplotlib 3.9; the venv has 3.11.2, where `labels` is rejected.
+
+### Reproduce
+
+    GPU=1 bash competition2_rank_prediction/experiments/hard_boundary_atlas/run.sh
+    O=runtime/competition2_research/experiments/hard_boundary_atlas
+    for mode in linear binned; do
+      PYTHONPATH=.:competition1_player_identification \
+        competition2_rank_prediction/c1/.venv/bin/python -m \
+        competition2_rank_prediction.experiments.hard_boundary_atlas.permutation_null \
+        --table $O/feature_table.npz --metrics $O/feature_metrics.csv \
+        --residual $mode --output $O/permutation_null_$mode.json
+    done
+
 ## Cohort
 
 The first version uses the existing 2,000-question holdout3 opponent-identity cache:

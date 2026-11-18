@@ -218,9 +218,10 @@ def hard_boundary_plot(
     for ax, index in zip(axes, chosen):
         low_values = features[hard & (truth == low), index]
         high_values = features[hard & (truth == low + 1), index]
+        # `labels` was renamed `tick_labels` in matplotlib 3.9 and removed later.
         ax.boxplot(
             [low_values, high_values],
-            labels=[RANKS[low], RANKS[low + 1]],
+            tick_labels=[RANKS[low], RANKS[low + 1]],
             showfliers=False,
             whis=(10, 90),
         )

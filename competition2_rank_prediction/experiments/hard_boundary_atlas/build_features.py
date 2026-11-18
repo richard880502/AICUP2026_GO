@@ -174,7 +174,9 @@ def game_features(
         unknown = torch.sigmoid(model.unknown)[k.clamp(max=2)][:, None]
         rank_prob = (1 - unknown) * rank_prob + unknown * prior
         exp_rank = rank_prob @ rank_axis
-        variance = rank_prob @ (rank_axis[None] - exp_rank[:, None]).square()
+        # Per-game variance sum_k p_k (k - mu)^2. A matrix product here would
+        # fail for most batch sizes and silently mix games when batch == 10.
+        variance = (rank_prob * (rank_axis[None] - exp_rank[:, None]).square()).sum(1)
         rows["game"].append(idx.cpu().numpy())
         rows["top_similarity"].append(s.max(1).values.detach().cpu().numpy())
         rows["top_identity_probability"].append(
