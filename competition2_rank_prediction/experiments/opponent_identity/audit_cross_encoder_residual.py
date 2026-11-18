@@ -116,13 +116,37 @@ def class_tables(sample: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]
     return player_rank.astype(np.int64), own_class
 
 
+def use_v4_layout() -> None:
+    """The genuine 384-D v4 layout.
+
+    Importing `rich_full` rebinds `train.use_all_moves` to the 960-D v7 layout
+    for the whole process, and `apply.load_model` calls `train.use_all_moves()`
+    for any `all_moves` checkpoint. Without this, style_v4 is built with a
+    1002-wide input projection and its 426-wide checkpoint cannot load.
+    """
+    train.LAYOUT.length, train.LAYOUT.trunk, train.LAYOUT.engine = 160, 384, 42
+    train.LAYOUT.suffix = "_all"
+
+
+def load_v4() -> tuple:
+    """style_v4 model and scaling, built with the 384-D layout it was trained on."""
+    patched = train.use_all_moves
+    train.use_all_moves = use_v4_layout
+    try:
+        use_v4_layout()
+        model, scaling, _, _ = apply.load_model("style_v4")
+    finally:
+        train.use_all_moves = patched
+    return model, scaling
+
+
 def encode_v4(
     directory: pathlib.Path,
     rows: dict[str, np.ndarray],
     own_class: np.ndarray,
 ) -> np.ndarray:
     """Full v4 class-cosine matrix with the source player's own class masked."""
-    model, scaling, _, _ = apply.load_model("style_v4")
+    model, scaling = load_v4()
     # torch Parameter method; pylint cannot infer callability.
     classes = F.normalize(model.class_weights.detach().float(), dim=-1)  # pylint: disable=not-callable
     data = token_data(directory, rows)
@@ -429,7 +453,7 @@ def load_official_v4_sims(official_scores: pathlib.Path) -> np.ndarray | None:
         return None
     with np.load(official_scores) as saved:
         vectors = torch.from_numpy(saved["vectors"].astype(np.float32)).to(train.DEVICE)
-    model4, _, _, _ = apply.load_model("style_v4")
+    model4, _ = load_v4()
     classes4 = F.normalize(model4.class_weights.detach().float(), dim=-1)  # pylint: disable=not-callable
     sims4 = (vectors @ classes4.T).half().cpu().numpy()
     del model4, vectors, classes4

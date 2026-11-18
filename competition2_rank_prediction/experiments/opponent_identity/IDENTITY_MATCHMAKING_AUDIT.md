@@ -161,6 +161,88 @@ physical game. The remaining hypothesis is narrower:
 This follow-up stays on the same branch but uses a different reliability
 control from the failed exact-graph split.
 
+## Result (2026-11-18): gate fails — the identity-specific residual route closes
+
+Run on the 6,144-game `opp_sample.csv` (5,846 even/HD1 games, 4,315 source
+players split 2,139 / 2,176). The v4/v7 top-class agreement is **0.3773**,
+consistent with the recorded 36%, so the two encoders do disagree as the design
+assumes.
+
+### Predeclared gate at effective posterior mass >= 2.0
+
+| Criterion | Required | Observed | |
+| --- | --- | --- | --- |
+| reliable identities, every check | >= 50 | **15-16** | fail |
+| mean cross-encoder correlation | >= 0.25 | 0.8073 | pass |
+| checks significant vs permutation null | >= 3/4 | **0/4** | fail |
+| mean held-out rounded-utility delta | >= +0.003 | **+0.0006** | fail |
+| no negative direction/fold | all >= 0 | all >= 0 | pass |
+| official posterior mass on reliable classes | >= 0.25 | **0.0902** | fail |
+
+Per this follow-up's own rule, failing the gate closes the identity-specific
+residual route. No frozen-delta v47 probe is justified.
+
+### The 0.81 correlation is not identity-specific
+
+| Check, mass >= 2.0 | Classes | Pearson | Null q95 | p |
+| --- | ---: | ---: | ---: | ---: |
+| v4 -> v7, half 0 | 16 | 0.9146 | 0.9149 | 0.15 |
+| v4 -> v7, half 1 | 15 | 0.8555 | 0.8623 | 0.82 |
+| v7 -> v4, half 0 | 15 | 0.8555 | 0.8623 | 0.80 |
+| v7 -> v4, half 1 | 16 | 0.9146 | 0.9149 | 0.17 |
+
+Without the permutation null, a cross-encoder correlation of 0.81 would read as
+a strong pass. The null reproduces it. **The safeguard worked**: this is the
+correlated-error failure the exact-graph warning anticipated, caught by exactly
+the control proposed for it.
+
+One caveat on the primary threshold itself. With 15-16 classes over ten ranks,
+most ranks hold one or two reliable identities, so a within-rank shuffle is
+close to the identity permutation; the null q95 and q99 are nearly equal
+(0.9149 / 0.9150). The permutation test has little power at this threshold.
+The verdict there rests on class count, utility and official coverage, all of
+which fail independently.
+
+### Exploratory: where the null does have power
+
+Not the predeclared threshold, reported only to show what the null looks like
+when it can bite. At mass >= 1.0 each check has 153-170 classes:
+
+| Check, mass >= 1.0 | Classes | Pearson / null q95 / p | Spearman / null q95 / p | Utility |
+| --- | ---: | --- | --- | ---: |
+| v4 -> v7, half 0 | 153 | 0.489 / 0.499 / 0.057 | 0.627 / 0.612 / 0.039 | +0.0007 |
+| v4 -> v7, half 1 | 170 | 0.525 / 0.586 / 0.241 | 0.699 / 0.687 / 0.026 | +0.0024 |
+| v7 -> v4, half 0 | 170 | 0.525 / 0.578 / 0.231 | 0.699 / 0.682 / 0.028 | +0.0009 |
+| v7 -> v4, half 1 | 153 | 0.489 / 0.490 / 0.054 | 0.627 / 0.613 / 0.035 | +0.0011 |
+
+**The null itself sits at 0.5-0.7.** Almost all of the cross-encoder agreement
+is structure that survives a within-rank identity shuffle. Spearman clears its
+null by about 0.015 in all four checks; Pearson clears it in none. Whatever
+identity-specific residual exists is small, and it is worth about +0.0013 in
+held-out utility on average — under half the gate even at a threshold that
+was not preregistered. Official reach at this threshold is 0.32.
+
+### Fix applied
+
+The audit could not load style_v4 at all:
+
+```text
+size mismatch for project.0.weight: checkpoint [256, 426], model [256, 1002]
+```
+
+Importing `rich_full` rebinds `train.use_all_moves` to the 960-D v7 layout for
+the whole process (`rich_full.py:50`), and `apply.load_model` calls
+`train.use_all_moves()` for every `all_moves` checkpoint. So v4 was built with
+a 1002-wide input projection (960 + 42) against its 426-wide checkpoint
+(384 + 42). The existing comment "must happen before rich_full.use_rich()"
+assumed call order was the hazard, but the rebinding happens at import time,
+so no ordering of calls could avoid it.
+
+`load_v4()` now swaps in the genuine 384-D layout for the duration of the load
+and restores the patched function afterwards. Both v4 call sites — `encode_v4`
+and `load_official_v4_sims` — go through it, so the result no longer depends
+on call order.
+
 ## Why cross-encoder
 
 A single style encoder can create false stability through hubness: the same
