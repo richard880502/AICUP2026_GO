@@ -125,16 +125,25 @@ Important files:
 - `logs/train_tenp3.log`
 - `logs/train_tenp10.log`
 
-## Conditional P2
+## P2: holdout3 cross-fit, C1+C2 and v47
 
-P2 is intentionally not implemented before P1 passes.
+P1 passed (`RESULTS.md`), so P2 asks whether the ten-profile gain survives the full pipeline.
 
-If P1 passes, the next experiment will:
+| Step | Script | What it does |
+| --- | --- | --- |
+| 1 | `p2_train.sh` | trains `tenp3_c{0,1}` (`--keep-profiles 0,3,5,9`) and `tenp10_c{0,1}` on `feat10_train` with `--exclude-players features/holdout3/exclude_c{c}.txt`; otherwise the P1 recipe (3 seeds, 40 epochs) |
+| 2 | `p2_score.py` | scores each fold's ensemble on `feat10_val` and `feat10_holdout3`; reads `keep_profiles` from the checkpoints and slices the stream axis exactly like `transformer_rank.load_splits`; refuses to write unless it reproduces the training script's `val_probs_<tag>.npz` |
+| 3 | `p2_evaluate.py` stage A | replays the locked C1+C2 cross-fit (`crossfit_cohort/evaluate.py`) with `d96` **replaced** (fusion member and C1 residual input); the production replay must give 0.7170117549 |
+| 4 | `p2_evaluate.py` stage B | refits the v47 opponent-identity layer (`opponent_identity/h3_final_v47.py`) on the two holdout3 halves with each arm's C1+C2 question probabilities as `base`; the original saved base is refitted in the same run |
 
-1. extract ten-profile own-side features for holdout3;
-2. train two ten-profile cross-fit models excluding holdout3 half 0/1 exactly like `d96_c0/c1`;
-3. replace only the d96 member inside the frozen C1+C2 replay, refitting fold-safe fusion/calibration;
-4. compare matched `C1+C2(3-profile)` vs `C1+C2(10-profile)`;
-5. only if that passes, combine with frozen v47 opponent-identity evidence.
+Gate (primary, stage B): `v47(tenp10) - v47(tenp3) >= +0.003`, paired player-bootstrap 95% lower bound `> 0`,
+and both holdout3 halves `>= 0`. Stage A is reported as secondary.
 
-The eventual decision metric is not the simple learner's +0.0147. It is the incremental utility over the current full pipeline.
+Run everything from the research root (`runtime/competition2_research`) once the holdout3 ten-profile cache is complete:
+
+```bash
+GPU=1 bash experiments/ten_profile_production/run_p2.sh
+```
+
+Outputs go to `/mnt/share_data_77/richard/AICUP2026_GO/ten_profile_production/p2/` (`models/`, `probabilities/`,
+`p2_report.json`, `p2_report.npz`, `logs/`). Results: `RESULTS.md`, section P2.
