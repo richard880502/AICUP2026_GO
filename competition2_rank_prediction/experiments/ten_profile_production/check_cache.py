@@ -19,11 +19,30 @@ def main() -> None:
     """Checks every shard's profile order, shape, finiteness and metadata alignment."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--features", type=pathlib.Path, required=True)
+    parser.add_argument(
+        "--shard-dir",
+        type=pathlib.Path,
+        help="optional games_*.csv source; require one feature file per source shard",
+    )
     args = parser.parse_args()
 
     shards = sorted(args.features.glob("feat_*.npz"))
     if not shards:
         raise FileNotFoundError(f"no feat_*.npz under {args.features}")
+    if args.shard_dir is not None:
+        source = sorted(args.shard_dir.glob("games_*.csv"))
+        expected = {
+            path.name.replace("games_", "feat_").replace(".csv", ".npz")
+            for path in source
+        }
+        actual = {path.name for path in shards}
+        missing = sorted(expected - actual)
+        extra = sorted(actual - expected)
+        if missing or extra:
+            raise ValueError(
+                f"shard coverage mismatch: source={len(source)} features={len(shards)} "
+                f"missing={missing[:5]} extra={extra[:5]}"
+            )
 
     games = 0
     samples: set[int] = set()
