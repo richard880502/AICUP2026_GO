@@ -30,3 +30,10 @@ PYTHONPATH=.:competition1_player_identification competition2_rank_prediction/c1/
   -m competition2_rank_prediction.experiments.rankmle_audit.audit \
   --features "$OUT/feat10_val" \
   --output "$OUT/report.json"
+
+# Seed robustness and the shuffled-column dimension control (CPU, ~10 minutes).
+PYTHONPATH=.:competition1_player_identification competition2_rank_prediction/c1/.venv/bin/python \
+  -m competition2_rank_prediction.experiments.rankmle_audit.seed_robustness \
+  --features "$OUT/feat10_val" \
+  --seeds 20 \
+  --output "$OUT/seed_robustness.json"

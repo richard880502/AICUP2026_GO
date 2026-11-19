@@ -20,6 +20,31 @@ Consequence: the audit no longer rules out a ten-profile extraction. Whether it 
 needs the extra profiles fed to the production learners (Transformer/ResNet) on the full training corpus and an untouched
 holdout before any adoption.
 
+## Robustness follow-up: the direction is stable, a single run is underpowered
+
+The gate result above is one question sampling and one fold split, with a lower bound of +0.00068. `seed_robustness.py`
+repeats the `three` and `ten` arms under 20 seeds and adds a dimension control: `ten`'s 21 extra columns are kept but shuffled
+across questions, which preserves their count and marginals and destroys their information.
+
+| 20 seeds | Mean | Min | Max |
+| --- | ---: | ---: | ---: |
+| `ten - three` | **+0.011715** | +0.003812 | +0.021150 |
+| shuffled extra columns `- three` | **-0.004047** | -0.006770 | -0.001434 |
+
+- `ten - three` is positive in **20 of 20** seeds; the shuffled control is negative in all 20. The gain is information in the
+  extra profiles, not the learner benefiting from more columns — uninformative columns cost about 0.004.
+- Only **6 of 20** seeds pass the gate on their own. Every seed clears +0.003, but the player-bootstrap interval is about
+  +-0.014 wide, so the lower bound usually crosses zero. The single passing run above was on the favourable side.
+- Seeds change question sampling and folds only; the same 400 players are used throughout. This shows robustness to sampling,
+  not to the cohort.
+
+Reading: a small, consistent own-move signal of about +0.012 on a 0.574 learner. The `ten` and `three` expected ranks still
+correlate 0.9949, and every earlier own-move improvement measured against v47 collapsed after fusion (full-coverage retrain
+-0.00058; strength score 0.000 with a zero fusion weight). The cheapest decisive next step is therefore a fusion test, not a
+full-corpus extraction: extract ten profiles for the holdout3 own-side games only, train the `three` and `ten` learners on this
+validation cohort, fuse each into the frozen v47 under the opposite-fold weight protocol used in `strength_score_v2`, and
+require `ten-fused - three-fused` to stay positive. Only then is a production-learner retrain worth its cost.
+
 ## Setup
 
 - Cohort: `features/shards/val`, 8 shards x 1,000 games = 8,000 games, 400 players x 20 games, 40 players per rank.
