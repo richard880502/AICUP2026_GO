@@ -3,7 +3,8 @@
 #
 # Phase 1: extract the training set with a low-memory KataGo config. Workers
 #   start only when MemAvailable stays above START_GB for three checks, their
-#   count scales with free memory (about 3.7 GB each, measured), and every
+#   count scales with free memory (about 6.2 GB each at steady state; a 40-game
+#   smoke test under-states this as 3.7 GB, so pass PER_WORKER_GB=6.5), and every
 #   worker is stopped if MemAvailable drops below KILL_GB. Extraction resumes
 #   by shard, so a stop only loses the shards in progress. A cooldown follows
 #   every stop so the driver does not oscillate.

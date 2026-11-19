@@ -1,4 +1,8 @@
-# Ten-profile production Transformer — P1 passes; the gain sits away from the hard boundaries
+# Ten-profile production Transformer — P1 passes, P2 fails: the gain does not survive the pipeline
+
+**Overall decision (2026-11-19): do not adopt ten profiles in production.** P1 below shows a real d96-level
+gain; P2 at the end shows it vanishes inside C1+C2 and is within pipeline noise on top of v47, where both matched
+arms score below the current production model.
 
 Completed 2026-11-19. Validation cohort (400 players, 40 per rank), d96 production Transformer alone. Exploratory: not a
 holdout3, C1+C2, v47, Public or submission result.
@@ -89,3 +93,77 @@ not oscillate. Timeline: extraction 11:23-12:59 with four workers, training and 
 
 Paths are for the w77 research host: run from `runtime/competition2_research`, outputs under
 `/mnt/share_data_77/richard/AICUP2026_GO/ten_profile_production/`.
+
+## P2 — holdout3 cross-fit: the gate fails
+
+Completed 2026-11-19. 2,000 holdout3 questions, cross-fitted over the two recorded halves. Per fold, `tenp3_c{f}` and
+`tenp10_c{f}` were trained on the ten-profile training cache with that half's holdout3 players excluded (3 seeds, 40
+epochs, P1 defaults), scored on the validation and ten-profile holdout3 caches, and swapped in for the `d96` member of
+the locked C1+C2 recipe (`res`, `oppC2` and the C1 residual unchanged). Stage B rebuilds the v47 cross-fit with each
+arm's C1+C2 question probabilities as `base`.
+
+### Sanity replays — all exact
+
+| Check | Result |
+| --- | --- |
+| scorer reproduces each arm's training-time validation probabilities | max abs diff 0.0, argmax agreement 1.0 |
+| stage A with the production d96 | 0.7170117549 = recorded 0.7170117549 |
+| stage A production question probabilities vs `full_qprob.npz` | max abs diff 0.0 |
+| stage B, original base and production replay | both 0.765302 |
+
+### Results
+
+| Stage | Production | `tenp3` | `tenp10` | `tenp10 - tenp3` | 95% CI | Halves |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| A — C1+C2 | 0.7170 | 0.7162 | 0.7157 | **-0.0005** | [-0.0046, +0.0037] | -0.0034 / +0.0025 |
+| **B — v47 (primary)** | **0.7653** | 0.7614 | 0.7636 | **+0.0022** | **[-0.0006, +0.0052]** | +0.0013 / +0.0032 |
+
+Gate (`>= +0.003`, lower bound `> 0`, both halves `>= 0`): **fails** on the first two criteria.
+
+Refit sensitivity (base jittered by `exp(1e-6 N(0,1))`, five refits, jitter shared across arms): `tenp10 - tenp3` =
++0.0022, +0.0014, +0.0035, +0.0030, +0.0020 — mean **+0.0024**, SD 0.0008. Each arm's own refit SD is about 0.00045.
+The direction is consistent; the size stays under the gate.
+
+### Stage A: the d96 gain disappears inside C1+C2
+
+On validation the fold models reproduce P1's d96-level gain (`transformer_rank.py`'s own report: +0.0096 in both
+folds). Inside C1+C2 it is gone: only **55 of 2,000** holdout3 decisions change between the arms (27 better, 26 worse),
+and C1+C2 1D/2D AUC is 0.7257 (production), 0.7243 (`tenp3`), 0.7270 (`tenp10`). The fusion weights barely move
+(`d96` 0.70-0.73, `res` 0.31-0.33, `oppC2` 0.54-0.55). The ResNet member, the opponent-side member and the C1
+residual already carry what the extra profiles add to d96.
+
+### Stage B: within noise, and below production
+
+`tenp10 - tenp3` changes 26 decisions (16 better, 9 worse); boundary AUCs move by less than 0.001 (1D/2D 0.7776 ->
+0.7782). The more important number is the matched control against production:
+
+| Pair, stage B | Delta | 95% CI |
+| --- | ---: | --- |
+| `tenp3 - production` | **-0.0039** | **[-0.0075, -0.0006]** |
+| `tenp10 - production` | -0.0017 | [-0.0054, +0.0019] |
+
+`tenp3` carries the same three profiles and the same games as production's d96, yet re-extracting and retraining it
+costs 0.0039 at the v47 level with an interval that excludes zero. **A single re-extract-and-retrain moves v47 by
+more than the ten-profile benefit.** Replacing production with `tenp10` would lose about 0.0017.
+
+Sources of that replication gap cannot be separated here: training-seed variance, FP16 batching differences from the
+low-memory extraction config, and KataGo's random symmetry in both extractions all contribute. It is also a caution
+for every earlier single-retrain comparison on this cohort: differences under about 0.004 at the v47 level are not
+reliably distinguishable from re-running the pipeline.
+
+### Reading
+
+This matches the risk stated before P2. The ten-profile gain is real for d96 alone, concentrated at the extreme ranks
+where v47 is already strong, and absent at 1D/2D where v47 is weak. Fused with the rest of the pipeline it no longer
+moves decisions. Do not extract ten profiles for the full corpus or the official test set.
+
+### Fixes during P2
+
+- `p2_score.py` crashed on holdout3: its shards store an empty rank for every game (labels live at question level in
+  `question_folds.csv`), so the per-game top-1 diagnostic could not map them. It is now `None` for unlabelled splits;
+  the scored probabilities were unaffected.
+- The first stage-B dry run fed arm probabilities as float64 while production's d96 is float32; stage A matched but v47
+  moved 0.765302 -> 0.764486. Arms are now read as float32, and every replay matches exactly.
+- The holdout3 cache was extracted with `lowmem_extract.sh` (the extraction-only form of `lowmem_p1.sh`). One run was
+  stopped at MemAvailable 1.36 GB while extra P2 work shared the host, and resumed with three workers; 25 shards,
+  24,822 games, cache check passes.

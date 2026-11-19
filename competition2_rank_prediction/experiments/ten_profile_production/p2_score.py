@@ -157,6 +157,18 @@ def verify_validation(
     return stats
 
 
+def per_game_top1(probabilities: np.ndarray, ranks: np.ndarray) -> float | None:
+    """Per-game top-1 accuracy, or None for a split without per-game ranks.
+
+    holdout3 shards store an empty rank for every game: its labels live at
+    question level in question_folds.csv and are scored by p2_evaluate.
+    """
+    if not all(str(rank) in lib.LEVELS for rank in ranks):
+        return None
+    labels = lib.rank_ids(ranks)
+    return float((probabilities.argmax(1) == labels).mean())
+
+
 def main() -> None:
     """Scores, verifies and writes both arms of one fold."""
     args = parse_args()
@@ -191,11 +203,10 @@ def main() -> None:
                 probabilities=probabilities,
                 empty=empty,
             )
-            labels = lib.rank_ids(features["rank"])
             summary[tag][name] = {
                 "games": int(len(probabilities)),
                 "empty_games": int(empty.sum()),
-                "per_game_top1": float((probabilities.argmax(1) == labels).mean()),
+                "per_game_top1": per_game_top1(probabilities, features["rank"]),
             }
         print(json.dumps({tag: summary[tag]}, indent=2), flush=True)
     (args.output_dir / f"score_c{args.fold}.json").write_text(
