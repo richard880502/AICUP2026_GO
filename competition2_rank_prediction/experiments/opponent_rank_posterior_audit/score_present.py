@@ -98,9 +98,13 @@ def evaluate(args: argparse.Namespace) -> None:
         "colors": np.asarray([row["color"] == "W" for row in rows], np.int64),
         "has_engine": np.zeros(len(rows), dtype=bool),
     }
-    vectors = torch.from_numpy(train.encode(model, data, scaling, np.arange(len(rows)))).to(
-        classes.device
-    )
+    # train.encode uses chunks of up to 1,024 games internally. Reduce the
+    # caller chunk size to bound attention memory on a shared 24-GB GPU.
+    encodings = []
+    for start in range(0, len(rows), args.encode_batch):
+        index = np.arange(start, min(start + args.encode_batch, len(rows)))
+        encodings.append(train.encode(model, data, scaling, index))
+    vectors = torch.from_numpy(np.concatenate(encodings)).to(classes.device)
     cosines = (F.normalize(vectors.float(), dim=-1) @ classes.T).cpu().numpy()
     result = {
         "cosines": cosines.astype(np.float32),
@@ -123,7 +127,11 @@ def main() -> None:
     parser.add_argument("--present-csv", type=Path, default=DEFAULT_PROBE / "present.csv")
     parser.add_argument("--token-dir", type=Path, default=DEFAULT_PROBE / "present")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--encode-batch", type=int, default=128,
+                        help="Max game batch for frozen StyleEncoder inference")
     args = parser.parse_args()
+    if args.encode_batch < 1 or args.encode_batch > 1024:
+        parser.error("--encode-batch must be between 1 and 1024")
     evaluate(args)
 
 
