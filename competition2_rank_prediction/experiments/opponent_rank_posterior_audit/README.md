@@ -106,3 +106,74 @@ Do not tune representation weights or run another experimental leaderboard
 submission based on this P0 report. If there is convincing rank-level
 headroom, design a properly player-disjoint **P1 frozen Rank-aware Head** on
 training-only games and then a fresh independent **P2** full-pipeline gate.
+
+## P2 diagnostic: v47 error-source decomposition (exploratory; no new encoder)
+
+**Purpose:** In which circumstances does game-specific opponent rank retrieval
+*actually* help v47, and how sensitive are the remaining errors to the
+retrieval posterior versus the learned opponent-to-own-rank transition?
+
+**Important:** `h3_sims_v47.pt` has the asked player's true rank, not the
+opponents' true identities/ranks. A true opponent-rank Oracle and causal
+retrieval-vs-transition error percentages **cannot be computed**. The script
+reports only observed prediction flips and counterfactual sensitivities. It
+always sets `production_gate_passed=false` and never writes an official answer.
+
+From the repository root, on the machine with the existing v47 cache:
+
+```bash
+git fetch origin
+git checkout experiment/opponent-rank-posterior-audit
+GPU=1 bash competition2_rank_prediction/experiments/opponent_rank_posterior_audit/run_decomposition.sh
+```
+
+No KataGo extraction or frozen encoder training. The script refits two tiny
+v47 cross-fit models per fold for a **properly refitted information ablation**
+(full versus no game-specific identity), and applies four fixed *same-model*
+perturbations (posterior temperature x0.75/x1.25, transition-logit scale
+x0.75/x1.25). The full arm **must replay 0.765302** on the original 2,000
+holdout3 questions before a report is written. No new model is adopted.
+
+Requires these existing inputs:
+
+- `/tmp2/richard/claude_scratch/opp_probe/h3_sims_v47.pt`;
+- `runtime/competition2_research/features/holdout3/question_folds.csv`.
+
+Override `PY=`, `GPU=`, `DEVICE=`, `STATE=`, `LABELS=` and `OUT=` as necessary.
+The script works from any working directory. For CPU-only debugging set
+`DEVICE=cpu`, but full 300-step cross-fitting on ~6,807 identity classes will
+be much slower than GPU.
+
+Outputs in the same `OUT` folder as P0:
+
+- `v47_error_decomposition.json`: replay checks, `full` / `no_retrieval` /
+  own-move `base` utility and NLL, paired player-bootstrap CIs, 1D/2D and
+  other hard-boundary AUC, confidence bins, and four-way sensitivity table.
+- `v47_error_decomposition.npz`: **aligned per-question** OOF predictions,
+  true own rank, question/player IDs, folds, confidence proxies, error/sensitivity
+  masks, eligibility and number of usable games for audit/reanalysis.
+
+Interpretation:
+
+1. `retrieval_increment_full_minus_refitted_no_retrieval` estimates the value
+   of **game-specific opponent retrieval evidence** after refitting, not the
+   proportion of wrong opponent identities. The no-retrieval arm still knows
+   game kind, game count and C1+C2 base.
+2. `base_full_error_table` counts rescue/hurt/both-wrong when adding the **whole
+   identity+transition stack**. It does not isolate an opponent retrieval error.
+3. `error_sensitivity_not_causal_attribution` groups wrong questions by whether
+   ±25% perturbations to *frozen* retrieval/transition parameters flip the
+   chosen rank. These perturbations are deliberately not matched in causal
+   intensity. `neither` means stable to **these perturbations**, not inherently
+   unfixable or registered-rank label noise.
+4. `official_compatible_questions` excludes questions with any HD>=2 game.
+   Report all-question and filtered results, not just the best-looking subset.
+5. Holdout3 is repeatedly inspected and v47 weights are fit cross-fold, so this
+   remains **exploratory**. Do not use it as an independent production gate or
+   decide to train a new Rank-aware Head solely from the diagnostic.
+
+CPU tests (synthetic, no competition data):
+
+```bash
+python -m unittest competition2_rank_prediction.experiments.opponent_rank_posterior_audit.test_decompose_v47 -v
+```
