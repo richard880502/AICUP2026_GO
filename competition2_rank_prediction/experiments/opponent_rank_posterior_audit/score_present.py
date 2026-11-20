@@ -116,7 +116,13 @@ def evaluate(args: argparse.Namespace) -> None:
         "true_class": true_class.astype(np.int32),
         "true_rank": class_rank[true_class].astype(np.int8),
         "player_id": np.asarray([row["player_id"] for row in rows], dtype=str),
-        "game_id": np.asarray([row["game_id"] for row in rows], dtype=str),
+        # Training game_ids are unique only within one rank file: present.csv
+        # has 76 ids shared by two different games from different rank files
+        # (different SGF and player). Qualify each with its global training row
+        # from `note` so the uniqueness check guards real duplicates only.
+        "game_id": np.asarray(
+            [f"{row['game_id']}@{row['note'].split(':')[1]}" for row in rows], dtype=str
+        ),
     }
     validate(result)
     args.output.parent.mkdir(parents=True, exist_ok=True)

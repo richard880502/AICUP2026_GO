@@ -3,7 +3,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT"
-export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+# competition1_player_identification modules import their siblings by top-level
+# name (e.g. evaluate_decision_features), so that directory must be on the path too.
+export PYTHONPATH="$ROOT:$ROOT/competition1_player_identification${PYTHONPATH:+:$PYTHONPATH}"
 PY="${PY:-runtime/competition2_research/c1/.venv/bin/python}"
 # The historical scripts typically use the research root as cwd; prefer its venv.
 if [[ ! -x "$PY" ]]; then
