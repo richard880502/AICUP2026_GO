@@ -127,3 +127,68 @@ soft-pooling calibration) and wrong for choosing a prior.
     CUDA_VISIBLE_DEVICES=1 c1/.venv/bin/python -m \
       experiments.opponent_rank_posterior_audit.count_prior_v47 \
       --output /mnt/share_data_77/richard/AICUP2026_GO/opponent_rank_posterior_audit/count_prior_v47.json
+
+## P2 diagnostic: v47 error-source decomposition
+
+Run 2026-11-20 with `run_decomposition.sh` (`decompose_v47.py`); the seven bundled unit tests pass. Exploratory and
+not causal: there are no true opponent ranks on holdout3, so no oracle attribution is possible.
+
+Sanity: the full arm replays v47 exactly (0.7653, absolute difference 0.0) and the base replays C1+C2 (0.7170).
+
+### Nearly all of v47's gain over C1+C2 is identity retrieval
+
+| Arm | Utility | Exact | NLL | 1D/2D AUC | A/1D AUC | 2D/3D AUC |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| C1+C2 base | 0.7170 | 0.5820 | 1.0790 | 0.7257 | 0.8136 | 0.8050 |
+| v47 refitted without game-specific identity | **0.7111** | 0.5755 | 1.0457 | 0.7194 | 0.8175 | 0.7914 |
+| full v47 | **0.7653** | 0.6485 | 0.8788 | **0.7773** | 0.8337 | 0.8341 |
+
+Retrieval increment (full minus refitted no-retrieval): **+0.0542 [+0.0403, +0.0690]**, halves +0.0568 / +0.0517;
++0.0486 [+0.0330, +0.0643] on the 1,587 official-compatible questions. Without identity, the rest of the v47 stack
+(game kind, game count, transition, C1+C2 base) scores **below** C1+C2 alone, so its value is entirely the retrieved
+opponent ranks. That holds at the hardest boundary too: 1D/2D AUC 0.719 without retrieval, 0.777 with it.
+
+Adding the whole identity stack to the base: 972 questions right in both, 325 base errors rescued, 192 base-correct
+questions hurt (mostly to an adjacent rank; their full-arm utility is 0.364), 511 wrong in both.
+
+### v47's two knobs sit at their optimum
+
+| Fixed same-model perturbation | Delta vs full | 95% CI |
+| --- | ---: | --- |
+| retrieval temperature x1.25 (softer) | -0.0093 | [-0.0165, -0.0018] |
+| retrieval temperature x0.75 (sharper) | -0.0092 | [-0.0153, -0.0030] |
+| transition logits x0.75 (softer) | -0.0120 | [-0.0194, -0.0037] |
+| transition logits x1.25 (sharper) | -0.0160 | [-0.0238, -0.0083] |
+
+Every direction hurts, consistent with the temperature sweeps in the P0 and count-correction work.
+
+### Most remaining errors do not respond to either knob
+
+Official-compatible questions v47 gets wrong (567), grouped by which ±25% perturbation flips the chosen rank:
+
+| Flipped by | Wrong questions | High / low confidence |
+| --- | ---: | --- |
+| retrieval only | 29 | 8 / 21 |
+| transition only | 51 | 21 / 30 |
+| both | 66 | 23 / 43 |
+| **neither** | **421 (74%)** | 187 / 234 |
+
+Sensitivity, not attribution, and these perturbations are not matched in strength. Still, three quarters of the
+remaining errors are not near a decision boundary of either component. That fits what the rest of this project
+found: the residual error comes from registered ranks that disagree with playing strength and from the width of
+matchmaking itself, not from mis-tuned retrieval or transition.
+
+Confidence bins (top-rank mass of the opponent rank posterior, opposite-fold median 0.517): utility 0.722 on the
+low-mass half, 0.806 on the high-mass half.
+
+### Instability worth knowing
+
+The fitted v47 parameters differ a lot between the two halves: the HD1 opponent-White unknown share is 0.421 in one
+and 0.089 in the other, and the base weight is 0.48 against 0.71. This matches the refit sensitivity measured in the
+ten-profile P2 and is one reason single-refit differences under about 0.004 are not reliable on this cohort.
+
+### Reading
+
+No cheap v47 lever is left. Retrieval is what makes v47 work, its temperature and the transition strength are
+already at their optimum, the class-count prior is already right (P1 above), and most remaining errors sit away from
+the boundaries those components control.
