@@ -177,3 +177,77 @@ CPU tests (synthetic, no competition data):
 ```bash
 python -m unittest competition2_rank_prediction.experiments.opponent_rank_posterior_audit.test_decompose_v47 -v
 ```
+
+
+## P3: Known vs unknown opponent recognition (frozen v4 controls, exploratory)
+
+`known_unknown_audit.py` answers a different question from the rank prior
+experiments: **can v4 separate previously seen gallery identities from players
+whose identities it never saw?** The 4,096 `present.csv` known-identity games
+are compared against the 18,000 games of 1,200 never-seen validation/final
+cohort players in the existing `opp_probe/controls.npz`. No encoder is trained.
+
+Run from the repository root (CPU only, using existing caches):
+
+```bash
+git fetch origin
+git switch experiment/opponent-rank-posterior-audit
+git pull --ff-only origin experiment/opponent-rank-posterior-audit
+bash competition2_rank_prediction/experiments/opponent_rank_posterior_audit/run_known_unknown_audit.sh
+```
+
+The runner requires `/tmp2/richard/claude_scratch/opp_probe/{controls.npz,present.csv}`.
+Override `PROBE`, `CONTROLS`, `PRESENT`, `PY`, and `OUT` as needed. If
+`h3_sims.pt` (original v4 holdout3 game scores) and the prior
+`v47_error_decomposition.npz` exist, a **read-only v47 proxy diagnostic** is
+included. It also tries the archived v4 cache at
+`production/rank_opponent_identity_20261114/h3_sims.pt`. If either file is
+missing, the control result still runs; the v47 proxy is skipped.
+
+Outputs in `$OUT`:
+
+- `known_unknown_audit.json`: held-out known/unknown AUC, player-balanced Brier,
+  known recall at 1% / 5% false-positive rate (cutoffs determined from the
+  *opposite* controls fold), and illustrative precision at assumed known shares
+  of 50% and 70%. Includes optional v47 proxy quartile tables.
+- `known_unknown_audit.npz`: control OOF scores/labels/group folds and optional
+  question-aligned v47 proxies; no official answers or new submissions.
+
+Implementation checks / assumptions:
+
+1. Original `link_test.absent_controls()` concatenates the 600x15 validation
+   cohort and 600x15 final cohort in player-major order, so the 18,000 absent
+   scores are grouped into **1,200 disjoint players**, 15 consecutive games
+   each. The loader intentionally refuses a different layout rather than
+   silently mixing opponents from the same player across folds.
+2. Two control folds are assigned by a stable player hash. Model selection
+   uses a **fixed 2-feature (top cosine, top-two margin), ridge-regularized
+   logistic regression** trained on opposite-fold controls. Each class and
+   each player have equal weight within the fitting fold. The score has a
+   balanced-control prior; it is not deployment-calibrated `P(known)`.
+3. Optional v47 features come from **v4** `h3_sims.pt` and align 1:1
+   with frozen `v47_error_decomposition.npz` question IDs, own-rank truth,
+   folds and HD0/HD1 eligibility. No holdout3 labels are used in fitting
+   the classifier; labels are used only to *describe* OOF utility/error rates.
+4. **Do not deploy the transferred classifier:** v47 masks  holdout3
+   player classes and uses v4+v7 similarity averaging. The v4-only controls
+   use the full unmasked gallery, so control calibration does not transfer
+   faithfully to v47. The optional question score is explicitly named
+   `v4_known_proxy`, not `P(true opponent is known)`. The masked-gallery
+   distribution shift is recorded. There are no true opponent identity labels
+   on holdout3, so this is *not* an opponent oracle or causal attribution.
+5. No v47 model weights, class priors, decoder or Production code are changed.
+   The report always sets `production_gate_passed=false`; all correlations,
+   error strata and within-confidence comparisons remain exploratory because
+   Holdout3 was repeatedly inspected.
+
+Synthetic CPU tests:
+
+```bash
+python -m unittest competition2_rank_prediction.experiments.opponent_rank_posterior_audit.test_known_unknown_audit -v
+```
+
+**Research decision:** Good control AUC alone cannot justify a new v47 gate
+or deployment. The next *properly controlled* experiment would reproduce
+the controls using the **same gallery mask and v4+v7 ensemble** as v47, and
+then test any tiny gating head on a fresh nested player-disjoint outer cohort.
