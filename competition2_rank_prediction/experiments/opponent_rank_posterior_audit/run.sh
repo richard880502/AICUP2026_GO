@@ -21,14 +21,14 @@ if [[ ! -f "$PROBE/present.csv" ]]; then
     exit 1
   fi
 fi
-if ! ls "$PROBE"/present/shard_*.npz >/dev/null 2>&1; then
-  echo 'Extracting missing frozen HumanSL trunk tokens (no training).'
+if [[ -f "$PROBE/present/COMPLETE" ]]; then
+  echo 'Reusing completed frozen HumanSL trunk cache; scoring checks row alignment.'
+else
+  echo 'Extracting/resuming frozen HumanSL trunk tokens (no training).'
+  CUDA_VISIBLE_DEVICES="$GPU" "$PY" -m competition1_player_identification.experiments.trunk_style.extract \
+    --games "$PROBE/present.csv" --output "$PROBE/present" \
+    --samples 160 --local-only --workers "${WORKERS:-4}" --batch-games "${BATCH_GAMES:-4}"
 fi
-# Resumable: extraction skips shards already on disk. Exact record-id checks
-# in score_present.py fail if this cache is incomplete or mismatched.
-CUDA_VISIBLE_DEVICES="$GPU" "$PY" -m competition1_player_identification.experiments.trunk_style.extract \
-  --games "$PROBE/present.csv" --output "$PROBE/present" \
-  --samples 160 --local-only --workers "${WORKERS:-4}" --batch-games "${BATCH_GAMES:-4}"
 CUDA_VISIBLE_DEVICES="$GPU" "$PY" -m \
   competition2_rank_prediction.experiments.opponent_rank_posterior_audit.score_present \
   --present-csv "$PROBE/present.csv" --token-dir "$PROBE/present" \
