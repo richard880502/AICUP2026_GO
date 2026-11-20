@@ -1,5 +1,9 @@
 # Opponent rank posterior audit (P0) — results
 
+**Bottom line (2026-11-20): v47's sum-over-classes pooling is the right one.** The class-count correction
+that looked promising on the control (+0.0156) costs v47 0.0146 on holdout3 (see the P1 section at the
+end). Keep production unchanged.
+
 Completed 2026-11-20. Known-player control only: 4,096 unused games from 1,754 known v4 gallery players, 6,807 classes.
 Not a v47 or competition utility, and not representative of the ~25% of official opponents who are not training
 players. No training; no official test record read. The five bundled unit tests pass.
@@ -85,3 +89,41 @@ ten-profile P2). Per this README, that belongs in a properly gated P1, not a dec
   games, about 9.8 games/s.
 
 `count_prior_check.py`: pylint 10.00, mypy clean.
+
+## P1 inside v47: the count correction hurts — do not adopt
+
+`count_prior_v47.py`, preregistered before running (arms, beta, gate and jitter all fixed in its docstring). Same
+two-half holdout3 cross-fit and deterministic algorithms as the ten-profile P2. The correction scales the per-game
+opponent-rank posterior by `n_r^-beta` before v47's unknown mixture; `n_r` counts the classes left in the softmax
+after masking holdout3 players, which makes the imbalance even sharper (A 1,265, 1D 194).
+
+Sanity: `beta0` runs the same code path with the correction skipped and replays production exactly (0.765302, max
+abs difference 0.0).
+
+| Arm vs `beta0` | Delta | 95% CI | Halves | Changed (better / worse) |
+| --- | ---: | --- | --- | --- |
+| **`beta1` (primary, fixed from the control)** | **-0.0146** | [-0.0218, -0.0075] | -0.0168 / -0.0124 | 152 (50 / 100) |
+| `beta_learned` (fit 0.154 / 0.301 by half) | -0.0086 | [-0.0130, -0.0044] | -0.0060 / -0.0112 | 55 (13 / 41) |
+| `beta1`, 1,587 official-compatible questions | -0.0154 | [-0.0234, -0.0071] | -0.0167 / -0.0142 | 119 (38 / 80) |
+| `beta_learned`, official-compatible | -0.0074 | [-0.0124, -0.0028] | -0.0039 / -0.0108 | 44 (12 / 31) |
+
+Five jittered refits (base times `exp(1e-6 N(0,1))`, shared across arms): `beta1 - beta0` = -0.0138, -0.0140,
+-0.0121, -0.0139, -0.0130 — mean **-0.0134**, SD 0.0008, far outside refit noise. Gate: **fails** on every criterion.
+
+The correction was meant to help 1D. It hurts 1D most (per-rank delta **-0.0348**), and **1D/2D AUC falls from 0.7773
+to 0.7548**. Learned beta moves away from zero because training-half NLL prefers a little correction, yet utility
+still drops: NLL and expected-utility decoding disagree here.
+
+### Why the control misled
+
+`sum_{c in r} P(c | game)` is the Bayes marginal over opponent ranks under a uniform prior over **players**, which is
+the right prior when opponents are drawn from the player population: more A players means more A opponents. The
+control was sampled to be close to rank-balanced, so a uniform prior over **ranks** (beta = 1) matched that sample's
+design rather than real opponents. A rank-balanced control is fine for measuring retrieval (the 26% same-rank share,
+soft-pooling calibration) and wrong for choosing a prior.
+
+`count_prior_v47.py`: pylint 10.00, mypy clean. Run from `runtime/competition2_research`:
+
+    CUDA_VISIBLE_DEVICES=1 c1/.venv/bin/python -m \
+      experiments.opponent_rank_posterior_audit.count_prior_v47 \
+      --output /mnt/share_data_77/richard/AICUP2026_GO/opponent_rank_posterior_audit/count_prior_v47.json
