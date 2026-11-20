@@ -91,6 +91,10 @@ def evaluate(args: argparse.Namespace) -> None:
         raise ValueError("present.csv includes a class outside the frozen gallery")
     if not np.array_equal(class_rank[true_class], global_row // 100000):
         raise ValueError("ground truth class/rank disagrees with source training row")
+    # Do not silently accept controls from the encoder's training games.
+    _owners, _rows, trained_global_rows = link_inputs.v4_gallery()
+    if np.isin(global_row, trained_global_rows).any():
+        raise ValueError("present.csv contains games seen by the v4 identity encoder")
     data = {
         "trunk": tokens,
         "engine": np.zeros((len(rows), 160, 42), np.float16),
