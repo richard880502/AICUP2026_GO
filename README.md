@@ -148,6 +148,12 @@ Read
 [`competition2_rank_prediction/CURRENT_BEST.md`](competition2_rank_prediction/CURRENT_BEST.md)
 for the authoritative score and locked evaluation protocol.
 
+## Final submissions
+
+The two final submissions, their weights and score files are collected in
+[`final_20261125/`](final_20261125/README.md) (weights are published as GitHub release
+assets, not committed).
+
 ## External models used (for the final report)
 
 The official Q&A requires every external model to be disclosed with its

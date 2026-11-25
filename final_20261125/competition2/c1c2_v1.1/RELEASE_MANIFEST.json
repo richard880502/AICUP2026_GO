@@ -1,0 +1,874 @@
+{
+ "release": "v1.1_2026-10-22",
+ "built": "2026-10-22 09:26 UTC",
+ "files": {
+  "code/analysis_bias.py": {
+   "sha256": "8881e60175be109f1b9dcc650594a989dce48c5848239dc00d40a8b5494d8dc6",
+   "size": 2823,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/analysis_bias2.py": {
+   "sha256": "a3990aef10bd188384fe7adb5aade3f44093a9ac78bcbfd289603eccb27cc0e8",
+   "size": 2795,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/analysis_holdout.py": {
+   "sha256": "e0758999c6a8b3e68d0a7f2dcfead941f10a978bb854137e3d05612aba3ce788",
+   "size": 5068,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/analysis_snap.py": {
+   "sha256": "313b2789fb472fa72f757a6f8deb258b2d4546058a23348dcbbd9fbd6703cea5",
+   "size": 1486,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/blend_eval.py": {
+   "sha256": "2aaf5a17e51b1841388a65830d19ff26763c5469bc70b6bbf50621c4d4f5f14d",
+   "size": 3919,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/board_sim.py": {
+   "sha256": "6d09ab24a4598b09ff644f75c01e5ca28866d53a7431f8da4f413b94be404774",
+   "size": 3785,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/configs/analysis_fast.cfg.tmpl": {
+   "sha256": "33975166f2807b6327beb2cadeb43b2b0731cbf696a39f15f795666e7d5daf02",
+   "size": 636,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/configs/analysis_gpu1.cfg": {
+   "sha256": "6ca435d36185b2164dbe509f09f902e3c56ca3cc962fa33df0c1770e9a3e3346",
+   "size": 357,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/configs/analysis_gpu1_big.cfg": {
+   "sha256": "2b2f82f99a445fa52dba2dbcb4d1a19004c01061ac01492aebec7a5d65152583",
+   "size": 384,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/eval_dense_fusion.py": {
+   "sha256": "f4d3d31a2685c909384942463a8f471682a784e0659601025e21cb16522d1e0f",
+   "size": 2370,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/eval_dense_holdout.py": {
+   "sha256": "1c8d9d8c7a14feedfce12d97411e1714597e1fcb161e513db689a12bde5620ee",
+   "size": 2278,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/eval_final.py": {
+   "sha256": "1ce872c209354f1c44ba102a872810a0e9c2f32ac37672925cf5f38a8b3e4aed",
+   "size": 2825,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/eval_holdout.py": {
+   "sha256": "5a46f7e6ada0a9e6b62a4be6b05216128dd0c555b66688c2b588901325c8f47e",
+   "size": 4694,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/extract_rank_features.py": {
+   "sha256": "638abb7e2f97d6588358687c5b79f7f98bf7488051c44a21b264847ea4337839",
+   "size": 17755,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/extract_value_features.py": {
+   "sha256": "74e577c1ce96621dde8715021ddd0a4f8c4c426ee1e7e93b371ca31ff10666eb",
+   "size": 4544,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/fight_features.py": {
+   "sha256": "cf2116c69f322e02bca5401c64e3f6837ad08cf0c1a7d4b86a6fff47268a451b",
+   "size": 8444,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/make_submission.py": {
+   "sha256": "9291fcb8b61f8dea4c1bacf441d7e3ec7982d359a120a35c6cbd11b794f60a3f",
+   "size": 2000,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/move_transformer.py": {
+   "sha256": "a2a3bef4979e3b2fc2eca36076ad64a3a68c34f74089a903d63bc82481457b60",
+   "size": 9891,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/mypy.ini": {
+   "sha256": "1a988e9351be07dba69362695e12d7f86fae19e9768386984356da52dbbd01eb",
+   "size": 544,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/predict_test.py": {
+   "sha256": "6467e02deb757423b611791c9277ec0247a8c0fb1bc5b20084b4eec0c17e2754",
+   "size": 36986,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/question_aggregator.py": {
+   "sha256": "c1a929b6a7c4e3967df891a96a1a3679fdf9316bf5615381d148f47dc1f65264",
+   "size": 7177,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/rank_lib.py": {
+   "sha256": "71eb5be64f16fb77ef0c7959837d3f5a84b2b7da2fde26571cd049ac3a5f0020",
+   "size": 4218,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/requirements.txt": {
+   "sha256": "309cbcfd1b2d4bc08f72be1a3da48eefd8102091b7396c9ec53e2e0437c8b1d5",
+   "size": 281,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/residual_shift.py": {
+   "sha256": "3f2354ecba50af2018b17c03729b501b95cbab169c044aca2711faf8ea77dbc1",
+   "size": 7402,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/resnet_rank.py": {
+   "sha256": "bd006274507b18ded63cf808a326a2c98608375c79adc3c04de7a1f58386889d",
+   "size": 10208,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/check_submission.py": {
+   "sha256": "f580a50a36a06a59d6a88a704fe58f1a55abb1aa1acc310d95ea515f74483ccd",
+   "size": 9563,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/e2e_check.py": {
+   "sha256": "845843d240c85a8cf96f7c0cb1d4ed751ac99c65acc0c35663b8e8d3ff867845",
+   "size": 10386,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/extract_final_result.py": {
+   "sha256": "5289e8c59c147d61f8d1bc677d6c827835c45c2f00067588fe94dbeb594799f4",
+   "size": 5832,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/make_fake_test.py": {
+   "sha256": "30a5f74fbf791c206f2dfe2fb88980e664798e90e1ef6b288d98577f3c51a98f",
+   "size": 1857,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/make_holdout_test.py": {
+   "sha256": "1802fca44b44d8492875dd34673e6cf3bf8ec8e6affd19b5e7981e422f5cdda6",
+   "size": 4858,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/make_pilot_games.py": {
+   "sha256": "a8310df5f7d02a09c6d75824389429b434faa4424797d5506cd086fdf929d8eb",
+   "size": 546,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/make_subset.py": {
+   "sha256": "1e88f3f6263d802b0b027a680549b626e2c3550f9bdb18d661fd0e47bf2a943c",
+   "size": 2427,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/preflight_test.py": {
+   "sha256": "9b82d1b65bc14641cdea68bfd785a9e840f49605745e4a5cbf3ea5b7b0f55c78",
+   "size": 27923,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/prep_moves.py": {
+   "sha256": "c22a51b73e158439f8f37c93a081deefd73c131628f9b89af018aeba7e72ea34",
+   "size": 2366,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/prep_test_moves.py": {
+   "sha256": "65cec1a3723cd4066e14ac8e9e37a8f321c26fe560dd59c78fe8af6c56d13ef0",
+   "size": 2526,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/run_extraction.sh": {
+   "sha256": "459dc9e5c8196ca95446c316c2a94fd3b88c6711b3f70733da5b252c6ffe756f",
+   "size": 736,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/run_extraction96.sh": {
+   "sha256": "484e7f644f1c4c57217cb55df9067e4b11c953cefdc2c1b47653e12cf405c293",
+   "size": 690,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/run_frozen.sh": {
+   "sha256": "5fffb80fd15f575bec4959140b7ec0fdc6ed36e2b3f7a68dadc3c759b4c666b4",
+   "size": 2798,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/run_test_extraction.sh": {
+   "sha256": "b5b85180cb9d436d6693566b254f0c6079f4edf870118194aec336b82d46a3ef",
+   "size": 3311,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/run_value_extraction.sh": {
+   "sha256": "b1579de80c84ca2d5069a86dadfef9170dc999f96c0d51a041b4bf0e88f619fc",
+   "size": 558,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/test_to_games.py": {
+   "sha256": "55beb01ee362e8f7be8047d597cf8434e70a9aae66ce2ea9d00d598c1eb923aa",
+   "size": 4799,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/scripts/verify_release.py": {
+   "sha256": "56785a44db622dd3e9b1a6bffb9a8ec9333781cda867713e19611bf9fdcef2c8",
+   "size": 5086,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/sgf_check.py": {
+   "sha256": "3e77129d642f4862073ef8cea93f0036a8b2f159f8f1426279658e81a6b46b66",
+   "size": 8120,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/snapshot_probs.py": {
+   "sha256": "ff749b2a82c0da708415d57f7b9ea8d8ecbd5896184fdffa892f3bf972bee082",
+   "size": 1637,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/tests/anomaly/.gitignore": {
+   "sha256": "61f65dd9598c7421870bf4918332637f83f34abe1f9fc7cc095852ef7a1b44f7",
+   "size": 6,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/tests/anomaly/run_anomaly.py": {
+   "sha256": "939cc9caf423cca23ccc62f0c06c487954c0bdca71cc332c945355b2c5e56f66",
+   "size": 16512,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/train_eval.py": {
+   "sha256": "cc2508b0de111f05489ae6fa61827156f19018590f9a73b624de57b80b33f80e",
+   "size": 4737,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "code/transformer_rank.py": {
+   "sha256": "3428805a32fb7939130cde96336a2ecfe82c337dec8bcd78cb96921890a4db57",
+   "size": 20846,
+   "role": "frozen source snapshot (runtime/ holds identical copies)"
+  },
+  "artifacts/c1/go_retrieval/__init__.py": {
+   "sha256": "5d297c7c9a27708e801be87af84d24b3c34bcc231b6d64786884c198a6e31969",
+   "size": 53,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/go_retrieval/data.py": {
+   "sha256": "e6081f4ee968bcb1c98e455d2db7cab315f2a212b818790331ef218737a5996f",
+   "size": 13761,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/go_retrieval/katago.py": {
+   "sha256": "c56a5a3b68eb0f53b8d8519ff32342445a21e44a85acf5d9ca32966b3a5f8ab1",
+   "size": 22884,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/go_retrieval/py.typed": {
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "size": 0,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/go_retrieval/result_io.py": {
+   "sha256": "c7a6788a20fd3a4825bdfcfa8027fdbf6164d8ccff2cbf9998c3d9015dbf9921",
+   "size": 429,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/go_retrieval/sgf.py": {
+   "sha256": "4e12a414dfebeac522b66e7e7973449fabbf215c65d5f1a268ea8321e6f99764",
+   "size": 1538,
+   "role": "competition-1 SGF/KataGo helpers imported by the extractor"
+  },
+  "artifacts/c1/models/katago/b18c384nbt-humanv0.bin.gz": {
+   "sha256": "637746e44f0efe00ad1245a50aa9bbf0716efe364c43965ead97bd6835d84ab5",
+   "size": 99066230,
+   "role": "KataGo HumanSL network (extraction)"
+  },
+  "artifacts/c1/models/katago/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz": {
+   "sha256": "9d7a6afed8ff5b74894727e156f04f0cd36060a24824892008fbb6e0cba51f1d",
+   "size": 97898094,
+   "role": "KataGo main network (extraction)"
+  },
+  "artifacts/c1/scripts/run_katago.sh": {
+   "sha256": "a0d25814c1d70de4d27b3b607532cd7274c3d08e3366998b008490958fe07d0f",
+   "size": 859,
+   "role": "KataGo launcher (CUDA libs from the venv)"
+  },
+  "artifacts/c1/third_party/katago/katago": {
+   "sha256": "3614ebfbe62d1ad6b8087c372d011c72195f2ebd65196bcb2fe4eaadc5616d7d",
+   "size": 51198456,
+   "role": "KataGo v1.18.2 binary"
+  },
+  "artifacts/configs/analysis_fast_current_512_512.cfg.tmpl": {
+   "sha256": "33975166f2807b6327beb2cadeb43b2b0731cbf696a39f15f795666e7d5daf02",
+   "size": 636,
+   "role": "KataGo analysis config in the snapshot (512/512, not verified bit-identical)"
+  },
+  "artifacts/configs/analysis_fast_validated_160_256.cfg.tmpl": {
+   "sha256": "e41f34213af001731af59cd77beff4a697c6a4f330fc5183f606158e07d5986a",
+   "size": 636,
+   "role": "KataGo analysis config used for all validated features (160/256)"
+  },
+  "artifacts/features/feat96opp/val/feat_0000.npz": {
+   "sha256": "8eb3335a239e75b1ac34f7356e29f2df94dedceb235ec47abce459e9d7fad6f4",
+   "size": 3102847,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_0001.npz": {
+   "sha256": "9442ff4e1be4b6f33f8cf825846fb60abe2ed7a96bd9e8acaa238409b1780aee",
+   "size": 3087117,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1000.npz": {
+   "sha256": "3a8c8f6fc0423c0521abe9b64abea1fa6607bd8507e9ed1d93e0fbaabe471e12",
+   "size": 3105731,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1001.npz": {
+   "sha256": "6c00f7e89229b80100a26cd408a00fb5a8e7261a45ca611a5a490c1ea9950c2d",
+   "size": 3109390,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1002.npz": {
+   "sha256": "f1c3d0e9d09fcea0e14836676f1bf507757639c271b0e5a1746ecb2b8e4aab20",
+   "size": 3108528,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1003.npz": {
+   "sha256": "bb3ba951c9a0d04731fcca42a9b2117f1b319adc1c4ef84c65dfddf2f49447cf",
+   "size": 3082448,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1004.npz": {
+   "sha256": "41bb697eb5b48d68f6e2570c43ca50645b11d6bcbfa6fb6d1ae206c77a3b4cc8",
+   "size": 3133347,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/feat96opp/val/feat_1005.npz": {
+   "sha256": "ea837a6f9a29b6d47f77c782d85c76ded3698429f329659ce5e863122f8d6600",
+   "size": 3093540,
+   "role": "validation opponent features (only if val_probs_d96_opp is missing)"
+  },
+  "artifacts/features/final_result/val/feat_0000.npz": {
+   "sha256": "ac3249a5f38a85a7a23f8eb09bf2fc6c64829898f315377c7ea548b67ffd002c",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0001.npz": {
+   "sha256": "acaee032850a9d486139f283178b87c5bfa5f4bacf2fca101f3abd43f144e358",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0002.npz": {
+   "sha256": "1a8d45f841549ea1859977cb513f50d12ec1e88e60cb66d4cf2c5bcbfd9c16ca",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0003.npz": {
+   "sha256": "3d80afd5cb595cb03265b2d02fbdecbb4003ffad5a1035e83e29e0d1dcb1197e",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0004.npz": {
+   "sha256": "b6f34b958192a276e433dd66af91798a48a960293a31c313d333d2f575b1ee82",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0005.npz": {
+   "sha256": "a538434e6c9db7f82b9e36995cefc67f3ecd5fe0bb2767c94a0a51cddac2cd15",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0006.npz": {
+   "sha256": "7f9549f9ac84a68dfb98db0d58759548f1c8d1c43518d179b245651680dbf0a0",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/features/final_result/val/feat_0007.npz": {
+   "sha256": "396d1ce347c4087a1dfbc6c66a518e572ab866f8d65c26e6bfd76d79b5aea0c3",
+   "size": 145726,
+   "role": "validation KataGo final-position features (C1 fit)"
+  },
+  "artifacts/results/aggregator.pkl": {
+   "sha256": "35f177315d12dc3565b29e7662b05f38370d02bcf604c25b9fb4a1d71e410d4b",
+   "size": 5570,
+   "role": "optional learned aggregator (off by default)"
+  },
+  "artifacts/results/d96_seed0.pt": {
+   "sha256": "74b3615620f10abe2bb9aa7246784dbb11dea873af976e829110612396b335c7",
+   "size": 2063597,
+   "role": "player member: dense 96-decision Transformer (3 seeds)"
+  },
+  "artifacts/results/d96_seed1.pt": {
+   "sha256": "b615da230c98c1b07032b3e10a46ffcc562d778dbde08dc7364ea3e2b294d08d",
+   "size": 2063597,
+   "role": "player member: dense 96-decision Transformer (3 seeds)"
+  },
+  "artifacts/results/d96_seed2.pt": {
+   "sha256": "9efbdea91a8d662a891c69953d988c3d43b58ca9146c2a5f165baf50c1557751",
+   "size": 2063597,
+   "role": "player member: dense 96-decision Transformer (3 seeds)"
+  },
+  "artifacts/results/move.pt": {
+   "sha256": "670ca937cb63bc0b1563a1601686040b165ea4f4103c35ee6fb66895ce93b4c7",
+   "size": 7613858,
+   "role": "full4 fallback: move-sequence Transformer"
+  },
+  "artifacts/results/opp_scratch_seed0.pt": {
+   "sha256": "e94b4bf5fc6088a0559e862d5f4945f413dabb3d3866154220c98625457b607d",
+   "size": 2064213,
+   "role": "C2 opponent member: opponent-specific Transformer (3 seeds)"
+  },
+  "artifacts/results/opp_scratch_seed1.pt": {
+   "sha256": "2053b47d0081f8320733b80f1263695dcfb71a27c191b81693fd0bb3b968f478",
+   "size": 2064213,
+   "role": "C2 opponent member: opponent-specific Transformer (3 seeds)"
+  },
+  "artifacts/results/opp_scratch_seed2.pt": {
+   "sha256": "cf89bdc9820052d08d1ead359529d2a29832dd1921864585a7ee1e75767db368",
+   "size": 2064213,
+   "role": "C2 opponent member: opponent-specific Transformer (3 seeds)"
+  },
+  "artifacts/results/resnet5_epoch3.pt": {
+   "sha256": "8117403a3b909ce566816016ffb1e49e4b343a872ff7b82d5010337b91794517",
+   "size": 105577824,
+   "role": "full4 fallback: ResNet5 snapshots"
+  },
+  "artifacts/results/resnet5_epoch4.pt": {
+   "sha256": "11cc1f903f02795ba2b06ae5ec7b65d6aa5ae8e85b575905488d193922da252e",
+   "size": 105577824,
+   "role": "full4 fallback: ResNet5 snapshots"
+  },
+  "artifacts/results/resnet5_epoch5.pt": {
+   "sha256": "8365648f967e81eaa1eeecb8bf289e123347aa8cff9dd1a2d5d0426fe5aed718",
+   "size": 105577824,
+   "role": "full4 fallback: ResNet5 snapshots"
+  },
+  "artifacts/results/resnet8c_epoch5.pt": {
+   "sha256": "745715b448483b4d10a5a646e980b7205b5f045a55e5e70c9d4e6da70a626dcb",
+   "size": 105578126,
+   "role": "player member: cosine ResNet snapshots (epochs 5-8)"
+  },
+  "artifacts/results/resnet8c_epoch6.pt": {
+   "sha256": "50aa78cbfb32ab1f8a8ef8f6a98ee80c41dc968062ea11b8835e30a8ec8369f4",
+   "size": 105578126,
+   "role": "player member: cosine ResNet snapshots (epochs 5-8)"
+  },
+  "artifacts/results/resnet8c_epoch7.pt": {
+   "sha256": "ea05ea213ae2e66ceddb4d832495adc7fbe50d6773638f578d44f738467ac152",
+   "size": 105578126,
+   "role": "player member: cosine ResNet snapshots (epochs 5-8)"
+  },
+  "artifacts/results/resnet8c_epoch8.pt": {
+   "sha256": "143c4b631d18ebb8d4c26e83ba44db2732da23169e4f9b45d9c38a65a668ff7e",
+   "size": 105578126,
+   "role": "player member: cosine ResNet snapshots (epochs 5-8)"
+  },
+  "artifacts/results/val_probs_d96.npz": {
+   "sha256": "c9a9ddba9b2c27c8014d4f8f13b9884e4f8b9313f61ee38c2132bfd40397d774",
+   "size": 1281002,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/results/val_probs_d96_opp.npz": {
+   "sha256": "1e6b5bfb52bdedfd6536bf55b1408f5f935d6c2a1dfe83a2b148ac2540754759",
+   "size": 1281002,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/results/val_probs_move.npz": {
+   "sha256": "0381fe63f5df958d8cffc971ed7ba6864e7acc272d4f00a0b1aa85384d145ea0",
+   "size": 1280988,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/results/val_probs_opp_scratch.npz": {
+   "sha256": "3163ae0a970f0d5acf24120b0a4998d76a1a960f2d4608f0089578275367dc07",
+   "size": 1281002,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/results/val_probs_resnet5.npz": {
+   "sha256": "4491063cd3996364837ec7255ceabd27c8c18cd535a272d0e397872289684323",
+   "size": 1280994,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/results/val_probs_resnet8c.npz": {
+   "sha256": "69927cecf8686c9e22198b2656605f3fe646c91871e9cf15b044dad61242967e",
+   "size": 1280996,
+   "role": "validation per-game probabilities (fusion weights, offsets, C1 fit)"
+  },
+  "artifacts/tutorial/network.py": {
+   "sha256": "794a0d9cc9a20984292a3746bcec6f6e106dac2ef14394cc0d142958693ec3b6",
+   "size": 2955,
+   "role": "tutorial ResNet architecture (resnet_rank imports the external copy)"
+  },
+  "fitted/fitted_params.json": {
+   "sha256": "873fd24761b7d6c00ae0fbee56829f5fe51c71671f99549ebbeadd067f12e0b0",
+   "size": 2103,
+   "role": "parameters fitted from validation at run time (frozen reference)"
+  },
+  "fitted/fitted_params.npz": {
+   "sha256": "7f659b63e12ecbc24871504659c388b76ebd0101453347493286c4ab1f365acb",
+   "size": 7154,
+   "role": "parameters fitted from validation at run time (frozen reference)"
+  },
+  "reference_outputs/holdout2/log_best2.txt": {
+   "sha256": "d58edbad40a7c471fc2de425847408d55f9fabf66093ba82660a8a6d4236b089",
+   "size": 1851,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/log_default.txt": {
+   "sha256": "22d3009b152f1b097ad7770d04efe1173a245960001cff08aa5b2cfdfac35166",
+   "size": 1707,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/log_full4.txt": {
+   "sha256": "d75317092c8b8c8d0fcc47408a118936cc4897f89f44791474b8706054f3f279",
+   "size": 2942,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/log_no_residual.txt": {
+   "sha256": "7b5f7cc97195021fe55fd11f92152bbfdc71887e4c722c14d3c2bfe2146409ef",
+   "size": 1893,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/log_opp_d96.txt": {
+   "sha256": "53e1c36caee7050b49ef8485855540b336cf42892d6e96a91f910b7fa83375b4",
+   "size": 1700,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/pred_best2.csv": {
+   "sha256": "27bfdca783505284ffb38c0c69877609fb8d510ae5982586e9a7799f2ee223bd",
+   "size": 5668,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/pred_default.csv": {
+   "sha256": "d864e617e2c5879fd2152264a0096354293b5032bfc87e4dfa4b235736df5455",
+   "size": 5669,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/pred_full4.csv": {
+   "sha256": "b17de28189c41be2cbe39df640bf31929f417c4aab9c17158219736c1f4e433e",
+   "size": 5668,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/pred_no_residual.csv": {
+   "sha256": "a9cebeaf2b36c24b3271e7c53092e74add81bfcdaec856c7eda4fecfde97f5c6",
+   "size": 5675,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/pred_opp_d96.csv": {
+   "sha256": "049723300a3baae6b8dafee6e260833690a9da7fffd25dd111ebcd3ffe21d015",
+   "size": 5666,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/probs_best2.npz": {
+   "sha256": "814095d2d1296fc595508c3585afa3e916ec702045ca099cb8b0dc392172a36a",
+   "size": 914686,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/probs_default.npz": {
+   "sha256": "fc73db5b1d39fc85418cc08303c0c5c068a8295ae5a97764fef5c11922e68838",
+   "size": 1117980,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/probs_full4.npz": {
+   "sha256": "a08628b7bfc77ec896c050e7e4809c01868e83173141f44ec96e6c3ba4afc43b",
+   "size": 1321252,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/probs_no_residual.npz": {
+   "sha256": "fc73db5b1d39fc85418cc08303c0c5c068a8295ae5a97764fef5c11922e68838",
+   "size": 1117980,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2/probs_opp_d96.npz": {
+   "sha256": "5bf1e3b745aa9acadeaa60eef92210bcf38b3d8ba259b453c6cb4cee0e0cdd1c",
+   "size": 1117972,
+   "role": "GPU (cuda:1) reference predictions, shared with v1 by hard link"
+  },
+  "reference_outputs/holdout2_cpu/log_best2.txt": {
+   "sha256": "ffe58e160c5852aa1771a3d27864fcf74ffe9a0797389a50b690c33d367e6d72",
+   "size": 2219,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/log_default.txt": {
+   "sha256": "64633d79cd4666677ab4b7b3a091e1e9128c751ba91bae676c7db3dcf01b9c5f",
+   "size": 2100,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/log_full4.txt": {
+   "sha256": "0e7feac95444759c09984350ac32d7a7ed22a1559bff8ffb2f425c8fd06b62c7",
+   "size": 3163,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/log_no_residual.txt": {
+   "sha256": "b910cb8c8c782acb818b3594d87bec2609b3450ba45807ef844cf06acc038c72",
+   "size": 2300,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/log_opp_d96.txt": {
+   "sha256": "3e87d7ad6c1c75590fc2eb5fda37eb34f7c0a517ac245f3152c741c37b0e6f6b",
+   "size": 2089,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_best2.csv": {
+   "sha256": "27bfdca783505284ffb38c0c69877609fb8d510ae5982586e9a7799f2ee223bd",
+   "size": 5668,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_best2_report.csv": {
+   "sha256": "90fe1b19e228756a38409ee413500f13f63a96b5ba1382a4956237fa0550a861",
+   "size": 14162,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_default.csv": {
+   "sha256": "569f8ecaa9c0d93e0fd11abfeea12eefe7d1914f56cfd5e09a5c402f83d04bb1",
+   "size": 5669,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_default_report.csv": {
+   "sha256": "68e7c4cb5476f023635e9267807cb7668e6924b989276ff887f7342b45e8d047",
+   "size": 18163,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_full4.csv": {
+   "sha256": "b17de28189c41be2cbe39df640bf31929f417c4aab9c17158219736c1f4e433e",
+   "size": 5668,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_full4_report.csv": {
+   "sha256": "362a6188fba3754e26b72878825a0e85d495a1598f85fbbceb5de83dc36100c7",
+   "size": 10884,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_no_residual.csv": {
+   "sha256": "a9cebeaf2b36c24b3271e7c53092e74add81bfcdaec856c7eda4fecfde97f5c6",
+   "size": 5675,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_no_residual_report.csv": {
+   "sha256": "a14661ef38c0cc1464db016edd3751d7231b5b4853f1e08e6daba6325041872e",
+   "size": 22169,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_opp_d96.csv": {
+   "sha256": "049723300a3baae6b8dafee6e260833690a9da7fffd25dd111ebcd3ffe21d015",
+   "size": 5666,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/pred_opp_d96_report.csv": {
+   "sha256": "8888ba3f1856e368e849c4e5419d237a484cbb592b46104798fc1b23612ef586",
+   "size": 18160,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/probs_best2.npz": {
+   "sha256": "ebe3d300627c4f05480b24f7550443ec8ec5b5c82ecaf9584def15f86d2c22fb",
+   "size": 914686,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/probs_default.npz": {
+   "sha256": "5a08d76bc6826141d3f4527b33c1eef55c216b3fef1e1461626449e9ec3dd1fb",
+   "size": 1117980,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/probs_full4.npz": {
+   "sha256": "1bdec7e6479c154d580f3a59f6422e3746ad43cfb1f557d64e0a484fd45eddcb",
+   "size": 1321252,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/probs_no_residual.npz": {
+   "sha256": "5a08d76bc6826141d3f4527b33c1eef55c216b3fef1e1461626449e9ec3dd1fb",
+   "size": 1117980,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/holdout2_cpu/probs_opp_d96.npz": {
+   "sha256": "86bc3df593f5771d1dcbaa24a99b2a2945d1a096a5a539415d17e72dfdb25891",
+   "size": 1117972,
+   "role": "v1.1 reference predictions on CPU (all configurations)"
+  },
+  "reference_outputs/identity_v1_cpu/log_best2.txt": {
+   "sha256": "35bc469a9a05b5e6119781575e07b397bbb2457fa5f592315e7b9e1e1a86f683",
+   "size": 1863,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/log_default.txt": {
+   "sha256": "511a10c7acdad4e4878b94e7cea296b8c9028d8cbe050ab928e063543a4f69d2",
+   "size": 1719,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/log_no_residual.txt": {
+   "sha256": "6af94ff0ff7af970fe22204f55adff5694312249121cdadd88ab56348a4b08a5",
+   "size": 1905,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/pred_best2.csv": {
+   "sha256": "27bfdca783505284ffb38c0c69877609fb8d510ae5982586e9a7799f2ee223bd",
+   "size": 5668,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/pred_default.csv": {
+   "sha256": "569f8ecaa9c0d93e0fd11abfeea12eefe7d1914f56cfd5e09a5c402f83d04bb1",
+   "size": 5669,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/pred_no_residual.csv": {
+   "sha256": "a9cebeaf2b36c24b3271e7c53092e74add81bfcdaec856c7eda4fecfde97f5c6",
+   "size": 5675,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/probs_best2.npz": {
+   "sha256": "ebe3d300627c4f05480b24f7550443ec8ec5b5c82ecaf9584def15f86d2c22fb",
+   "size": 914686,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/probs_default.npz": {
+   "sha256": "5a08d76bc6826141d3f4527b33c1eef55c216b3fef1e1461626449e9ec3dd1fb",
+   "size": 1117980,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/identity_v1_cpu/probs_no_residual.npz": {
+   "sha256": "5a08d76bc6826141d3f4527b33c1eef55c216b3fef1e1461626449e9ec3dd1fb",
+   "size": 1117980,
+   "role": "v1 on CPU: code-identity evidence against holdout2_cpu"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0000.npz": {
+   "sha256": "1f86dfa2d014e24f52abf1f2c07416fa21aa7016c6789363414fda0c16e181a0",
+   "size": 3088573,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0001.npz": {
+   "sha256": "45ae47244e82cf8c50b5de1e62f7ada7c49c4d5dfd6dfa6b5bcdae93d95ff37f",
+   "size": 3036318,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0002.npz": {
+   "sha256": "97244635aadcfffa6a552f9f1ba3eac29ab93a4835b28180a39fd2cbc2fbce94",
+   "size": 3082519,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0003.npz": {
+   "sha256": "7e1968f407bbcff2d91afd525514ad97847b6457ae0eed59170f75f92fc4409e",
+   "size": 3118904,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0004.npz": {
+   "sha256": "c9f134aa282bf344f8776923ec19c44d8a09f64914c7e94ab0287335604c5d42",
+   "size": 3078759,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96/feat_0005.npz": {
+   "sha256": "6bb2704db379b1d6517b5789722756fde6bcc80294d1aa75a49150266c07b69e",
+   "size": 234128,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0000.npz": {
+   "sha256": "37fce90d0c2a1e1957c516b4ce1da8497e8ff5ca41c96aa45f4d78a964f0e4b3",
+   "size": 3093194,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0001.npz": {
+   "sha256": "c4665917b42fd4420fb95d466c08d83643cd99e2cd33e7450f6c28e47b816e3e",
+   "size": 3041996,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0002.npz": {
+   "sha256": "07da82289a7224e932f64f3151adbb39a9f9fbce7d2b4e5c69674bce75278d29",
+   "size": 3089128,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0003.npz": {
+   "sha256": "008e315be0f3d65aa9dc9c7293f9c773548adc4ed594375d779c14450ffa9dde",
+   "size": 3123114,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0004.npz": {
+   "sha256": "edb621ceaeb2f05cadf299af16b505c2330cd44027f0309b66024dcf05d421ac",
+   "size": 3082318,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/feat96opp/feat_0005.npz": {
+   "sha256": "3d234ca011f18c0cf95f14c77a790dfba0ab9b3f361763e22e1ca33708dbaddc",
+   "size": 234021,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0000.npz": {
+   "sha256": "fc345bac3f8270a577dafbdb0e6ed271a44717b5788f27dd2368498d006924b9",
+   "size": 125726,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0001.npz": {
+   "sha256": "8ed5df6e99d22ef40ce23289a77ad78e9336e11f2c4b48b45d78da04b5c13674",
+   "size": 125726,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0002.npz": {
+   "sha256": "a39d73b83c0b1e2c3ae0f187f41f7cda1a0f9220e28ba6202375fb462698ac71",
+   "size": 133726,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0003.npz": {
+   "sha256": "2948f0e9f3e9e3bfaeb7d2f7ce0b2a02d156106f7bd17711d8d3683eca3ee98e",
+   "size": 133726,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0004.npz": {
+   "sha256": "3e35df62e2db2820b414c31049421485688f336428b1475cb16d7a6607bd3fe6",
+   "size": 133726,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/final_result/feat_0005.npz": {
+   "sha256": "30998a0d8b0e16ef96dac030c53884ef121adece7c8829b65d3595d0295b9775",
+   "size": 11758,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/moves.npz": {
+   "sha256": "3f4d85c2718d0b2aca2f3e07d37b193f05d31127b28ea3e84a7e9c155d9ba5d7",
+   "size": 6513760,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/tests/labels.csv": {
+   "sha256": "e301d8383d7d6fb1c30f011ad9305fc1e334567270e7b05305423c9e1fa8b8ae",
+   "size": 5657,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/tests/rank_prediction_test_private.csv": {
+   "sha256": "2b346ed42542fdd018ff8df72233316d6052ba0915cbc0fcfcf8bc284cdd635a",
+   "size": 3489618,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/inputs/holdout2/tests/rank_prediction_test_public.csv": {
+   "sha256": "6cb6c733ff361eeb613bb0c715a6a3aead5aa2aa6981dedd5fbaf8e2450e0935",
+   "size": 3370392,
+   "role": "frozen holdout2 inputs for the reference run"
+  },
+  "reference_outputs/summary.json": {
+   "sha256": "a76861d290c2c6cd5ba70d5b9da4033b3cc033391f68eba36f8be8f61dc55af6",
+   "size": 3623,
+   "role": "verified reference predictions"
+  },
+  "tools/build_manifest.py": {
+   "sha256": "08b17b60a199009b05254dae4ade91f8785dc9d47c2e1446a065fdf866b089b1",
+   "size": 4853,
+   "role": "release tooling"
+  },
+  "tools/dump_fitted.py": {
+   "sha256": "d8f4c499d55ad3ed17e734b4c4ab6770bfa7175fb0c18a41510c7e530d8a3cae",
+   "size": 3546,
+   "role": "release tooling"
+  },
+  "ENV.txt": {
+   "sha256": "4dc37e56c775f92b00f2db6020a5c7a4c60afe7e8c7d1c0d3b5bc8032e373777",
+   "size": 1798,
+   "role": "environment record"
+  },
+  "code_sha256.txt": {
+   "sha256": "9b1eec2b030defa744b6cddeabc7f72955350610be49e356d73609532627826a",
+   "size": 4312,
+   "role": "snapshot hash list"
+  }
+ },
+ "external": {
+  "/tmp2/richard/aicup_tutorial_review/network.py": {
+   "frozen_copy": "artifacts/tutorial/network.py",
+   "sha256": "794a0d9cc9a20984292a3746bcec6f6e106dac2ef14394cc0d142958693ec3b6"
+  }
+ },
+ "runtime_links": {
+  "runtime/results": "../artifacts/results",
+  "runtime/c1": "../artifacts/c1",
+  "runtime/features/feat96opp/val": "../../../artifacts/features/feat96opp/val",
+  "runtime/features/final_result/val": "../../../artifacts/features/final_result/val",
+  "artifacts/c1/.venv": "/tmp2/richard/best_64step_player_retrieval/.venv"
+ }
+}

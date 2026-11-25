@@ -109,6 +109,11 @@ Private 分數尚未公布。
 注意事項見
 [opponent identity 結果記錄](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md)。
 
+## 最終提交
+
+兩個比賽的最終提交、權重與分數檔整理在 [`final_20261125/`](final_20261125/README.md)
+（權重放在 GitHub release 附件，不進 Git）。
+
 ## 使用的外部模型（最終報告用）
 
 官方 Q&A 規定外部模型必須在報告中列出來源、版本、授權、用途與消融實驗。
