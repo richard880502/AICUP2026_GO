@@ -51,7 +51,10 @@ GitHub 的限制（2026-11-25 查官方文件）：
 | Git LFS（免費帳號） | 單檔 2 GB；儲存與每月流量各 10 GiB，超過就不能再推 | 可以，但流量會被下載吃掉 |
 | **Release 附件** | 單檔小於 2 GiB；每個 release 最多 1,000 個；總大小與流量不限 | **建議**：不佔 repo 大小，也不吃 LFS 額度 |
 
-`release_assets/` 已經打包好三個檔案，都小於 2 GiB：
+三個壓縮檔已上傳到 Release
+[`final-20261125`](https://github.com/richard880502/AICUP2026_GO/releases/tag/final-20261125)
+（2026-11-25），附 `SHA256SUMS.txt`；上傳後比對過 GitHub 上的 SHA256 與本機相同，
+研究機器上的 `release_assets/` 已刪除，內容仍以這個資料夾為準。
 
 | 檔案 | 大小 |
 | --- | ---: |
@@ -59,17 +62,11 @@ GitHub 的限制（2026-11-25 查官方文件）：
 | `go_final_competition2_c1c2_v1.1.tar` | 731 MB |
 | `go_final_competition2_opponent_identity_v47.tar` | 475 MB |
 
-上傳步驟（研究機器沒有 GitHub 憑證，要先複製到有 `gh` 登入的電腦）：
+下載與解開：
 
 ```bash
-scp -r w77:/tmp2/richard/AICUP2026_GO/final_20261125/release_assets ./go_release_assets
+gh release download final-20261125 --repo richard880502/AICUP2026_GO --dir go_final && cd go_final && shasum -a 256 -c SHA256SUMS.txt && for f in *.tar; do tar -xf "$f"; done
 ```
-
-```bash
-gh release create final-20261125 ./go_release_assets/*.tar ./go_release_assets/SHA256SUMS.txt --repo richard880502/AICUP2026_GO --title "Final submissions (2026-11-25)" --notes "Weights and score files for competition 1 v9 (Public 0.8961831) and competition 2 v47 (Public 0.7599623). See final_20261125/README.md."
-```
-
-Release 會掛在某個 commit 上，建議先把這個資料夾的說明檔 commit 並 push，再建立 release。
 
 注意：repo 目前是私人的（2026-11-25 查詢），release 附件也只有有權限的人看得到。
 提交檔（`submissions/`）是用官方題目算出來的答案，repo 原本的政策是不放提交檔，

@@ -1,5 +1,5 @@
 030c0345a34f4707322b83fc4ce808a5091de255fa1191271d1c4d33c996dc30  ./.gitignore
-f94d2a5b072af192504b81bee8fef17290371d21901300747fe4c666e6560833  ./README.md
+a9cce3fbd6dd835b9c7b5af2db4f82d7f7944b4107d5246bfc0836b0b10aca19  ./README.md
 8aeb81845d4d6836fedeabac0ee4bf74bec00ec34ea1e783c455dd1c8c1286ce  ./competition1/scores/pool_priv2.npz
 46956e81ab7ca9deb2ea7ce68fea12ad9eae276208f8a5042e29d7133b7382d7  ./competition1/scores/pool_pub2.npz
 0b80c9dc3ca5ad60bcbc6dc4a133331886962c4840655ff2caef7824ee753d31  ./competition1/scores/submission_v6_original_pools.csv
