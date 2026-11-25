@@ -2,43 +2,49 @@
 
 [中文說明](README.zh-TW.md)
 
-This monorepo keeps the two AI CUP Go tasks explicitly separated. They use
-different labels, evaluation metrics, model heads, and inference protocols;
-their scores must not be compared as if they were the same task.
+This monorepo holds the research code and records for the two AI CUP 2026 Go
+tasks. They use different labels, metrics, models and inference protocols, so
+their scores must not be compared.
 
-| Directory | Task | Internal benchmarks |
+| Directory | Task | Final official Public |
 | --- | --- | ---: |
-| [`competition1_player_identification/`](competition1_player_identification/) | Identify players among 400/600 enrolled candidates | Historical 400-way: **0.923040**; new 600-way final cohort: **0.7587** (open-set v2: 0.295403) |
-| [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict D–6D rank for unseen players | **0.7170** on a 2,000-player cross-fitted cohort (+0.041 over the previous default, pre-registered) |
+| [`competition1_player_identification/`](competition1_player_identification/) | Identify the player among 400 or 600 candidates | **0.8961831** (v9) |
+| [`competition2_rank_prediction/`](competition2_rank_prediction/) | Predict the registered rank (10 classes) of unseen players | **0.7599623** (v47) |
 
-These are offline proxy/holdout results under different protocols, not
-official leaderboard submissions.
+Private scores are not yet available. The two final submissions, their
+weights and score files are collected in
+[`final_20261125/`](final_20261125/README.md); the weights are published as
+GitHub release assets, not committed.
 
-Competition 1's v2 **Public best is 0.8961831** (2026-11-15, final: the scores
-of two per-move HumanSL trunk style encoders, 384-D and 960-D tokens, summed
-on the new pools; 0.8819787 with the 384-D encoder alone and move-to-move
-matching on all four pools, 0.8801077 with matching on the new pools only; see
-[the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)).
-Earlier that day 0.5640548 was reached by fusing pool-trained and open-set
-methods on all four pools (see
-[the record](competition1_player_identification/docs/public_v2_openset_20261113.md)).
-The previous v2 Public best was 0.5236602, reported by the user on
-2026-11-11. Frozen original-pool encoders improved on the candidate-retrained
-submission's 0.4650701 (+0.0585901). The v2 score averages original and new
-Public questions and is not comparable to the historical 0.923040 proxy.
-See the [official submission record](competition1_player_identification/docs/public_v2_20261111.md).
+## Score history
 
-Competition 2's **Public best is 0.7599623** (2026-11-15, final: opponent
-identity from two style encoders added to the previous pipeline; 0.7586411
-with one encoder on 2026-11-14; see
-[the record](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md)).
-The 2026-11-06 submission received 0.7227214 Public,
-reported by the user. Its Private score is not yet available. The exact
-submission record is in
-[`competition2_rank_prediction/docs/public_submission_20261030.md`](competition2_rank_prediction/docs/public_submission_20261030.md).
+### Competition 1: player identification
 
-The initial static-analysis baseline and known legacy debt are recorded in
-[`QUALITY.md`](QUALITY.md).
+| Date | Method | Public |
+| --- | --- | ---: |
+| 2026-11-11 | Original-pool encoders frozen and applied to the new pools | 0.5236602 |
+| 2026-11-13 | Pool-trained and open-set methods fused | 0.5640548 |
+| 2026-11-13 | Per-move HumanSL trunk activations + style encoder (v4) | 0.8592604 |
+| 2026-11-14 | Listwise reranker | 0.8637413 |
+| 2026-11-14 | Move-to-move matching + CSLS (v5) | 0.8801077 |
+| 2026-11-14 | Same method on the original pools (v6) | 0.8819787 |
+| 2026-11-15 | Second encoder on 960-D tokens, scores summed (v9, final) | **0.8961831** |
+
+Retraining on every labelled player (v11 / v12 / v13) scored 0.8922 / 0.8833 /
+0.8906; retraining alone moves the Public score by about ±0.01, so v9 stays.
+
+### Competition 2: rank prediction
+
+| Date | Method | Public |
+| --- | --- | ---: |
+| 2026-11-06 | KataGo / HumanSL per-move features, ordinal Transformer, ResNet, opponent-side model (C1+C2) | 0.7227214 |
+| 2026-11-14 | Evidence from recognised opponents' registered ranks (v4) | 0.7586411 |
+| 2026-11-15 | Opponents recognised with two style encoders (v47, final) | **0.7599623** |
+
+Records: [trunk style encoder](competition1_player_identification/docs/public_v2_trunk_style_20261113.md),
+[opponent identity](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md),
+[C1+C2](competition2_rank_prediction/CURRENT_BEST.md). The initial
+static-analysis baseline and known legacy debt are in [`QUALITY.md`](QUALITY.md).
 
 ## Current best architecture: player identification (Public 0.8961831)
 
@@ -114,45 +120,44 @@ flowchart TD
 
 ## Competition 1: player identification
 
-The original candidate library contains 100 reference games per player;
-v2 adds 600-player pools with ten games per player and mixed actor colors.
-The research
-pipeline extracts KataGo/HumanSL decision profiles, ownership-spatial features,
-and ArcFace game embeddings, then performs cosine retrieval followed by a
-group-softmax Top-20 reranker.
-The [completed new-task experiment](competition1_player_identification/experiments/open_set_v2/RESULTS.md)
-trained open-set encoders on 6,807 training players and evaluated on a separate
-600-player final pool: **0.295403**, versus the fixed Fisher-profile baseline
-**0.057627**. It uses ten references and 1/2/3/5-game queries, with learned
-local game matching, opening cues and a clean C2-derived rank prior. It has
-not replaced the official Public-best submission.
-
-For the v2 submission, original-pool encoders and normalization are frozen
-when embedding the new candidate/query pools; neural weights are not refit
-on their ten-game libraries.
-
-Read
-[`competition1_player_identification/README.md`](competition1_player_identification/README.md)
-for the exact method and reproduction commands.
+Every own move (up to 160 per game) is read by the frozen HumanSL network; the
+trunk activation at the played point, with 41 engine scalars, feeds a
+four-layer Transformer trained with ArcFace and supervised contrastive loss on
+6,807 training players. Candidates are scored by game-vector cosine and
+move-to-move matching, corrected with CSLS. The final v9 sums these scores
+from two encoders (384-D and 960-D move tokens) on the new pools; the original
+pools use the v6 answers. See
+[the record](competition1_player_identification/docs/public_v2_trunk_style_20261113.md)
+and [`competition1_player_identification/README.md`](competition1_player_identification/README.md).
 
 ## Competition 2: rank prediction
 
-The model must generalize to unseen players and predict one of ten ordered
-ranks. The current default (2026-10-21) combines dense KataGo/HumanSL ordinal
-models and ResNet snapshots with evidence from each game's **opponent** (an
-opponent-specific Transformer) and a question-level shift residual that uses
-the opponent distribution and a KataGo game-result proxy; both additions were
-confirmed in a pre-registered 2,000-player cross-fitted test.
+The C1+C2 pipeline (dense KataGo/HumanSL ordinal models, ResNet snapshots, an
+opponent-specific Transformer and a question-level shift residual) gives the
+base probabilities. The final v47 multiplies them with evidence from the
+opponents: about 70% of official test opponents are labelled training
+players, so the Competition 1 style encoders recognise them and their
+registered ranks inform the asked player's rank. See
+[`CURRENT_BEST.md`](competition2_rank_prediction/CURRENT_BEST.md) and
+[the opponent identity record](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md).
 
-Read
-[`competition2_rank_prediction/CURRENT_BEST.md`](competition2_rank_prediction/CURRENT_BEST.md)
-for the authoritative score and locked evaluation protocol.
+## Post-final audits (2026-11-17 to 11-20, all negative)
 
-## Final submissions
+After the final submissions, nine rank-prediction audits were run on separate
+branches. None changed a submission. The branches were removed on 2026-11-25;
+their commits are kept under the tags below.
 
-The two final submissions, their weights and score files are collected in
-[`final_20261125/`](final_20261125/README.md) (weights are published as GitHub release
-assets, not committed).
+| Tag | Topic | Result |
+| --- | --- | --- |
+| [`archive/experiment-strength-score-v2`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-strength-score-v2) | Strength Score v2, Tier A and full training coverage | all negative |
+| [`archive/experiment-rank-context-v1`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-rank-context-v1) | Rank context (handicap and colour channel) | the handicap channel is empty in the official test set |
+| [`archive/audit-shared-opponent-recurrence`](https://github.com/richard880502/AICUP2026_GO/tree/archive/audit-shared-opponent-recurrence) | Shared unknown opponents across test players | audited before building: do not build |
+| [`archive/audit-identity-matchmaking-graph`](https://github.com/richard880502/AICUP2026_GO/tree/archive/audit-identity-matchmaking-graph) | Identity / matchmaking graph, cross-encoder residual | preregistered gate fails; the identity route is closed |
+| [`archive/analysis-hard-boundary-feature-atlas`](https://github.com/richard880502/AICUP2026_GO/tree/archive/analysis-hard-boundary-feature-atlas) | Hard-boundary feature atlas (1D/2D) | nothing usable against a permutation null |
+| [`archive/research-rankmle`](https://github.com/richard880502/AICUP2026_GO/tree/archive/research-rankmle) | Ten HumanSL rank profiles instead of three (premise audit) | stable direction, underpowered |
+| [`archive/experiment-ten-profile-production`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-ten-profile-production) | Ten-profile production Transformer | +0.0139 alone, but the gain does not survive C1+C2 or v47 |
+| [`archive/experiment-conditional-complementarity-v1`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-conditional-complementarity-v1) | Ten-profile complementarity conditional on opponent confidence | screen fails, premise does not hold |
+| [`archive/experiment-opponent-rank-posterior-audit`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-opponent-rank-posterior-audit) | Ground-truth audit of opponent identity to rank posterior | known/unknown control audit; v47 proxy not deployable |
 
 ## External models used (for the final report)
 

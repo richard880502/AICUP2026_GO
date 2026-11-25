@@ -10,7 +10,8 @@
 | [`competition1_player_identification/`](competition1_player_identification/) | 玩家辨識：從 400 或 600 位候選人中找出下這幾盤棋的人 | **0.8961831** |
 | [`competition2_rank_prediction/`](competition2_rank_prediction/) | 棋力預測：預測沒見過的玩家的登記級數（10 級） | **0.7599623** |
 
-Private 分數尚未公布。
+Private 分數尚未公布。兩個最終提交、權重與分數檔整理在
+[`final_20261125/`](final_20261125/README.md)（權重放在 GitHub release 附件，不進 Git）。
 
 ## 分數演進
 
@@ -109,10 +110,22 @@ Private 分數尚未公布。
 注意事項見
 [opponent identity 結果記錄](competition2_rank_prediction/experiments/opponent_identity/RESULTS.md)。
 
-## 最終提交
+## 定案後的負面審查（2026-11-17 至 11-20）
 
-兩個比賽的最終提交、權重與分數檔整理在 [`final_20261125/`](final_20261125/README.md)
-（權重放在 GitHub release 附件，不進 Git）。
+最終提交之後，又在獨立分支上做了九個棋力預測的審查，都沒有改變任何提交。
+這些分支已在 2026-11-25 刪除，commit 保留在下列標籤。
+
+| 標籤 | 主題 | 結論 |
+| --- | --- | --- |
+| [`archive/experiment-strength-score-v2`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-strength-score-v2) | Strength Score v2、Tier A 與全量訓練覆蓋 | 全部負面 |
+| [`archive/experiment-rank-context-v1`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-rank-context-v1) | 級數情境（讓子與執色通道） | 官方測試集裡讓子通道是空的 |
+| [`archive/audit-shared-opponent-recurrence`](https://github.com/richard880502/AICUP2026_GO/tree/archive/audit-shared-opponent-recurrence) | 測試玩家之間共用的未知對手 | 先審查，結論是不值得做 |
+| [`archive/audit-identity-matchmaking-graph`](https://github.com/richard880502/AICUP2026_GO/tree/archive/audit-identity-matchmaking-graph) | 身分與配對圖、跨模型殘差 | 事先登記的門檻沒過，認人這條路到此為止 |
+| [`archive/analysis-hard-boundary-feature-atlas`](https://github.com/richard880502/AICUP2026_GO/tree/archive/analysis-hard-boundary-feature-atlas) | 1D/2D 難分界線的特徵圖譜 | 和隨機排列對照後沒有可用訊號 |
+| [`archive/research-rankmle`](https://github.com/richard880502/AICUP2026_GO/tree/archive/research-rankmle) | 用十個 HumanSL 級數設定取代三個（前提審查） | 方向穩定但樣本不足 |
+| [`archive/experiment-ten-profile-production`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-ten-profile-production) | 十設定版的正式 Transformer | 單獨 +0.0139，但疊上 C1+C2 或 v47 後增益消失 |
+| [`archive/experiment-conditional-complementarity-v1`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-conditional-complementarity-v1) | 依對手把握度分組的十設定互補性 | 篩選沒過，前提不成立 |
+| [`archive/experiment-opponent-rank-posterior-audit`](https://github.com/richard880502/AICUP2026_GO/tree/archive/experiment-opponent-rank-posterior-audit) | 認對手到級數後驗的真值審查 | 已知/未知對照；v47 的代理指標不能直接部署 |
 
 ## 使用的外部模型（最終報告用）
 
