@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+# The pinned PyTorch wheels provide the CUDA 12.1 user-space libraries.
+libraries=(/opt/aicup-venv/lib/python3.11/site-packages/nvidia/*/lib)
+joined=$(IFS=:; printf '%s' "${libraries[*]}")
+appdir=/opt/katago/squashfs-root
+export LD_LIBRARY_PATH="$appdir/usr/lib:$joined${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$appdir/usr/bin/katago" "$@"
